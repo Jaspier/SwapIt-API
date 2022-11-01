@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
+from utilities import FormatFireBaseError
+
 cred = credentials.Certificate('swapit-5eb81_service_account_keys.json')
 firebase = firebase_admin.initialize_app(cred)
 pb = pyrebase.initialize_app(json.load(open('firebase_config.json')))
@@ -38,8 +40,8 @@ async def signup(request: Request):
             password=password
         )
         return JSONResponse(content={'message': f'Successfully created user {user.uid}'}, status_code=200)
-    except:
-        return HTTPException(detail={'message': 'Error Creating User'}, status_code=400)
+    except Exception as err:
+        return HTTPException(detail={'message': str(err)}, status_code=400)
 
 
 # login endpoint
@@ -52,8 +54,9 @@ async def login(request: Request):
         user = pb.auth().sign_in_with_email_and_password(email, password)
         jwt = user['idToken']
         return JSONResponse(content={'token': jwt}, status_code=200)
-    except:
-        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
+    except Exception as err:
+        res = FormatFireBaseError(err)
+        return HTTPException(detail={'message': res["message"]}, status_code=res["code"])
 
 
 # ping endpoint

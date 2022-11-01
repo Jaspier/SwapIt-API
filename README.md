@@ -11,6 +11,9 @@ REST API for handling [SwapIt](https://gitlab2.eeecs.qub.ac.uk/40253397/swapit) 
 ## Installation
 
 - pip install pyrebase4 firebase_admin
+- Create firebase_config.json file with credentials
+- Create <firebase_projectName>_service_account_keys.json file with credentials
+- Email me for firebase credentials
 
 ## Usage
 

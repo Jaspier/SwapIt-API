@@ -35,11 +35,11 @@ async def signup(request: Request):
     if email is None or password is None:
         return HTTPException(detail={'message': 'Error! Missing Email or Password'}, status_code=400)
     try:
-        user = auth.create_user(
+        auth.create_user(
             email=email,
             password=password
         )
-        return JSONResponse(content={'message': f'Successfully created user {user.uid}'}, status_code=200)
+        return JSONResponse(content={'message': f'User successfully created.'}, status_code=200)
     except Exception as err:
         return HTTPException(detail={'message': str(err)}, status_code=400)
 

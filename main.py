@@ -5,7 +5,7 @@ import json
 from os import path
 import logging
 
-from firebase_admin import credentials, auth
+from firebase_admin import credentials, auth, firestore
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -20,6 +20,7 @@ logger = logging.getLogger('SwapIt')
 
 cred = credentials.Certificate('swapit-5eb81_service_account_keys.json')
 firebase = firebase_admin.initialize_app(cred)
+db = firestore.client()
 pb = pyrebase.initialize_app(json.load(open('firebase_config.json')))
 app = FastAPI()
 allow_all = ['*']
@@ -41,6 +42,16 @@ async def validate(request: Request):
     print(f"jwt:{jwt}")
     user = auth.verify_id_token(jwt)
     return user["uid"]
+
+
+@app.get("/myprofile")
+async def getProfiles(user: str = ""):
+    doc_ref = db.collection(u'users').document(user)
+    doc = doc_ref.get()
+    if doc.exists:
+        return doc.to_dict()
+    else:
+        return 'No such document!'
 
 
 if __name__ == "__main__":

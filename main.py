@@ -32,6 +32,16 @@ app.add_middleware(
     allow_headers=allow_all
 )
 
+
+@app.middleware("http")
+async def log_stuff(request: Request, call_next):
+    logger.debug(f"{request.method} {request.url}")
+    response = await call_next(request)
+    logger.debug(response)
+    logger.debug(response.status_code)
+    print(f"INCOMING REQUEST - {request.url} {response.status_code}")
+    return response
+
 # ping endpoint
 
 

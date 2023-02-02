@@ -6,7 +6,7 @@ from os import path
 import logging
 
 from firebase_admin import credentials, auth, firestore
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
@@ -33,6 +33,15 @@ app.add_middleware(
 )
 
 
+async def verify_auth(authorization: str = Header(None)):
+    id_token = authorization.split('Bearer ')[1]
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+        return decoded_token['uid']
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Unauthorized")
+
+
 @app.middleware("http")
 async def log_stuff(request: Request, call_next):
     logger.debug(f"{request.method} {request.url}")
@@ -55,14 +64,13 @@ async def validate(request: Request):
 
 
 @app.get("/myprofile")
-async def getProfiles(user: str = ""):
-    doc_ref = db.collection(u'users').document(user)
+async def myProfile(uid: str = Depends(verify_auth)):
+    doc_ref = db.collection(u'users').document(uid)
     doc = doc_ref.get()
     if doc.exists:
         return doc.to_dict()
     else:
         return 'No such document!'
-
 
 if __name__ == "__main__":
     uvicorn.run("main:app")

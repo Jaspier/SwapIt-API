@@ -7,3 +7,10 @@ def FormatFireBaseError(res: str):
     formatted = re.sub(r'^.*?"error"', '{\n"error"', stri)
     res = json.loads(formatted)
     return res["error"]
+
+
+def FormatFireBaseDoc(doc: object):
+    for key, value in doc.items():
+        if key == "timestamp":
+            doc[key] = value.isoformat()
+    return doc

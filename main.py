@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
-from utilities import FormatFireBaseError
+from utilities import FormatFireBaseError, FormatFireBaseDoc
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -65,12 +65,15 @@ async def validate(request: Request):
 
 @app.get("/myprofile")
 async def myProfile(uid: str = Depends(verify_auth)):
-    doc_ref = db.collection(u'users').document(uid)
-    doc = doc_ref.get()
-    if doc.exists:
-        return doc.to_dict()
-    else:
-        return 'No such document!'
+    try:
+        doc_ref = db.collection(u'users').document(uid)
+        doc = doc_ref.get()
+        if doc.exists:
+            data = FormatFireBaseDoc(doc.to_dict())
+            return JSONResponse(content=data, status_code=200)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to fetch profile: " + e)
 
 if __name__ == "__main__":
     uvicorn.run("main:app")

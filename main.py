@@ -1,3 +1,4 @@
+import datetime
 import uvicorn
 import firebase_admin
 import pyrebase
@@ -11,8 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
-from utilities import FormatFireBaseError, FormatFireBaseDoc
-from models import Location
+from utilities import FormatFireBaseError, FormatFireBaseDoc, FormatUserObject
+from models import Location, UserSwiped
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -125,6 +126,17 @@ async def getCardsFilter(uid: str = Depends(verify_auth)):
         raise HTTPException(
             status_code=400, detail="Unable to get swipes and/or passes: " + str(e))
 
+
+@app.post("/swipeLeft")
+async def addPass(userSwiped: UserSwiped, uid: str = Depends(verify_auth)):
+    try:
+        user_passed_dict = FormatUserObject(userSwiped)
+        db.collection(u'users').document(uid).collection(
+            u'passes').document(userSwiped.id).set(user_passed_dict)
+        return JSONResponse(content="Successfully added Pass", status_code=200)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Unable to add pass: " + str(e))
 
 if __name__ == "__main__":
     uvicorn.run("main:app")

@@ -1,5 +1,7 @@
 import re
 import json
+import datetime
+from models import UserSwiped
 
 
 def FormatFireBaseError(res: str):
@@ -14,3 +16,12 @@ def FormatFireBaseDoc(doc: object):
         if key == "timestamp":
             doc[key] = value.isoformat()
     return doc
+
+
+def FormatUserObject(userSwiped: UserSwiped):
+    user_swiped_dict = userSwiped.dict()
+    user_swiped_dict["coords"] = userSwiped.coords.copy()
+    timestamp_dict = user_swiped_dict["timestamp"]
+    timestamp = datetime.datetime.fromtimestamp(timestamp_dict["seconds"])
+    user_swiped_dict["timestamp"] = timestamp
+    return user_swiped_dict

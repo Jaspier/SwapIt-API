@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
 from utilities import FormatFireBaseError, FormatFireBaseDoc
+from models import Location
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -39,7 +40,7 @@ async def verify_auth(authorization: str = Header(None)):
         decoded_token = auth.verify_id_token(id_token)
         return decoded_token['uid']
     except Exception as e:
-        raise HTTPException(status_code=400, detail="Unauthorized")
+        raise HTTPException(status_code=400, detail="Unauthorized: " + str(e))
 
 
 @app.middleware("http")
@@ -73,7 +74,39 @@ async def myProfile(uid: str = Depends(verify_auth)):
             return JSONResponse(content=data, status_code=200)
     except Exception as e:
         raise HTTPException(
-            status_code=400, detail="Failed to fetch profile: " + e)
+            status_code=400, detail="Failed to fetch profile: " + str(e))
+
+
+@app.get("/getSearchPref")
+async def getSearchPref(uid: str = Depends(verify_auth)):
+    try:
+        doc_ref = db.collection(u'users').document(uid)
+        doc = doc_ref.get()
+        if doc.exists:
+            data = doc.to_dict()
+            prefs = {
+                "coords": data['coords'],
+                "radius": data['radius']
+            }
+            return JSONResponse(content=prefs, status_code=200)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to fetch search preferences: " + str(e))
+
+
+@app.post("/updateLocation")
+async def updateLocation(location: Location, uid: str = Depends(verify_auth)):
+    try:
+        city_ref = db.collection(u'users').document(uid)
+        updated_data = {
+            **location.dict(),
+            u'timestamp': firestore.SERVER_TIMESTAMP
+        }
+        city_ref.update(updated_data)
+        return JSONResponse(content="Successfully updated location", status_code=200)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to update location: " + str(e))
 
 if __name__ == "__main__":
     uvicorn.run("main:app")

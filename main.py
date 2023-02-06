@@ -108,5 +108,23 @@ async def updateLocation(location: Location, uid: str = Depends(verify_auth)):
         raise HTTPException(
             status_code=400, detail="Failed to update location: " + str(e))
 
+
+@app.get("/getCardsFilter")
+async def getCardsFilter(uid: str = Depends(verify_auth)):
+    try:
+        passes = [doc.id for doc in db.collection(
+            u'users').document(uid).collection(u'passes').stream()]
+        swipes = [doc.id for doc in db.collection(
+            u'users').document(uid).collection(u'swipes').stream()]
+        filter = {
+            u'passes': passes,
+            u'swipes': swipes
+        }
+        return JSONResponse(content=filter, status_code=200)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Unable to get swipes and/or passes: " + str(e))
+
+
 if __name__ == "__main__":
     uvicorn.run("main:app")

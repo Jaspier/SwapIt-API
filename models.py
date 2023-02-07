@@ -1,9 +1,5 @@
+import typing
 from pydantic import BaseModel
-
-
-class Timestamp(BaseModel):
-    nanoseconds: int
-    seconds: int
 
 
 class Coords(dict):
@@ -20,7 +16,7 @@ class Location(BaseModel):
     coords: Coords
 
 
-class UserSwiped(BaseModel):
+class UserObject(BaseModel):
     active: bool
     coords: Coords
     displayName: str
@@ -29,4 +25,4 @@ class UserSwiped(BaseModel):
     location: str
     photoUrls: str
     radius: int
-    timestamp: Timestamp
+    timestamp: typing.Any

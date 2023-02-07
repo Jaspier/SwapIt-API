@@ -1,4 +1,3 @@
-import datetime
 import uvicorn
 import firebase_admin
 import pyrebase
@@ -12,8 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
-from utilities import FormatFireBaseError, FormatFireBaseDoc, FormatUserObject
-from models import Location, UserSwiped
+from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId
+from models import Location, UserObject
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -128,7 +127,7 @@ async def getCardsFilter(uid: str = Depends(verify_auth)):
 
 
 @app.post("/swipeLeft")
-async def addPass(userSwiped: UserSwiped, uid: str = Depends(verify_auth)):
+async def swipeLeft(userSwiped: UserObject, uid: str = Depends(verify_auth)):
     try:
         user_passed_dict = FormatUserObject(userSwiped)
         db.collection(u'users').document(uid).collection(
@@ -136,7 +135,51 @@ async def addPass(userSwiped: UserSwiped, uid: str = Depends(verify_auth)):
         return JSONResponse(content="Successfully added Pass", status_code=200)
     except Exception as e:
         raise HTTPException(
-            status_code=400, detail="Unable to add pass: " + str(e))
+            status_code=400, detail="Unable to pass user: " + str(e))
+
+
+@app.post("/swipeRight")
+async def swipeRight(userSwiped: UserObject, uid: str = Depends(verify_auth)):
+    try:
+        logged_in_user_dict = None
+        loggedInUser_ref = db.collection(u'users').document(uid)
+        doc = loggedInUser_ref.get()
+        if doc.exists:
+            logged_in_user_dict = FormatFireBaseDoc(doc.to_dict())
+        else:
+            raise HTTPException(
+                status_code=400, detail="User does not exist: " + str(e))
+
+        # Check if user swiped on 'you' (TODO: Migrate to cloud function)
+        swipe_ref = db.collection(u'users').document(
+            userSwiped.id).collection(u'swipes').document(uid)
+        doc = swipe_ref.get()
+        user_swiped_dict = FormatUserObject(userSwiped)
+        if doc.exists:
+            db.collection(u'users').document(uid).collection(
+                u'swipes').document(userSwiped.id).set(user_swiped_dict)
+
+            # Create MATCH
+            db.collection(u'matches').document(GenerateId(uid, userSwiped.id)).set(
+                {
+                    u'users': {
+                        uid: logged_in_user_dict,
+                        userSwiped.id: user_swiped_dict
+                    },
+                    u'usersMatched': [uid, userSwiped.id],
+                    u'timestamp': firestore.SERVER_TIMESTAMP
+                }
+            )
+            return JSONResponse(content=logged_in_user_dict, status_code=201)
+        else:
+            # // User has swiped as first interaction with another user or no match :(
+            db.collection(u'users').document(uid).collection(
+                u'swipes').document(userSwiped.id).set(user_swiped_dict)
+            return JSONResponse(content="Successfully added Swipe", status_code=200)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Unable to swipe user: " + str(e))
 
 if __name__ == "__main__":
     uvicorn.run("main:app")

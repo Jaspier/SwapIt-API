@@ -1,7 +1,7 @@
 import re
 import json
 import datetime
-from models import UserSwiped
+from models import UserObject
 
 
 def FormatFireBaseError(res: str):
@@ -18,10 +18,17 @@ def FormatFireBaseDoc(doc: object):
     return doc
 
 
-def FormatUserObject(userSwiped: UserSwiped):
+def FormatUserObject(userSwiped: UserObject):
     user_swiped_dict = userSwiped.dict()
     user_swiped_dict["coords"] = userSwiped.coords.copy()
     timestamp_dict = user_swiped_dict["timestamp"]
     timestamp = datetime.datetime.fromtimestamp(timestamp_dict["seconds"])
     user_swiped_dict["timestamp"] = timestamp
     return user_swiped_dict
+
+
+def GenerateId(id1: str, id2: str):
+    if id1 > id2:
+        return id1 + id2
+    else:
+        return id2 + id1

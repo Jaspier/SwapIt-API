@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
 from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId
-from models import Location, UserObject
+from models import Location, UserObject, UserPrefsObject
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -64,6 +64,21 @@ async def validate(request: Request):
     return user["uid"]
 
 
+@app.get("/checkUserExists")
+async def checkUserExists(uid: str = Depends(verify_auth)):
+    try:
+        user_ref = db.collection(u'users').document(uid)
+        user = user_ref.get()
+        if user.exists:
+            return JSONResponse(content="User exists", status_code=200)
+        else:
+            raise HTTPException(
+                status_code=404, detail="User does not exist: " + str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to fetch user: " + str(e))
+
+
 @app.get("/myprofile")
 async def myProfile(uid: str = Depends(verify_auth)):
     try:
@@ -97,12 +112,12 @@ async def getSearchPref(uid: str = Depends(verify_auth)):
 @app.post("/updateLocation")
 async def updateLocation(location: Location, uid: str = Depends(verify_auth)):
     try:
-        city_ref = db.collection(u'users').document(uid)
+        location_ref = db.collection(u'users').document(uid)
         updated_data = {
             **location.dict(),
             u'timestamp': firestore.SERVER_TIMESTAMP
         }
-        city_ref.update(updated_data)
+        location_ref.update(updated_data)
         return JSONResponse(content="Successfully updated location", status_code=200)
     except Exception as e:
         raise HTTPException(
@@ -180,6 +195,60 @@ async def swipeRight(userSwiped: UserObject, uid: str = Depends(verify_auth)):
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Unable to swipe user: " + str(e))
+
+
+@app.get("/getSearchRadius")
+async def getSearchRadius(uid: str = Depends(verify_auth)):
+    try:
+        doc_ref = db.collection(u'users').document(uid)
+        doc = doc_ref.get()
+        if doc.exists:
+            data = FormatFireBaseDoc(doc.to_dict())
+            radius = data["radius"]
+            return JSONResponse(content=radius, status_code=200)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to fetch search radius: " + str(e))
+
+
+@app.post("/updateUserPrefs")
+async def updateUserDetails(userDetails: UserPrefsObject, uid: str = Depends(verify_auth)):
+    try:
+        auth.update_user(
+            uid,
+            display_name=userDetails.displayName,
+            photo_url=userDetails.photoURL)
+        user_ref = db.collection(u'users').document(uid)
+        user = user_ref.get()
+        if user.exists:
+            prefs_ref = db.collection(u'users').document(uid)
+            prefs_ref.update({
+                u'displayName': userDetails.displayName,
+                u'radius': userDetails.radius,
+                u'timestamp': firestore.SERVER_TIMESTAMP
+            })
+        else:
+            db.collection(u'users').document(uid).set({
+                u'id': uid,
+                u'displayName': userDetails.displayName,
+                u'radius': userDetails.radius,
+                u'timestamp': firestore.SERVER_TIMESTAMP
+            })
+        return JSONResponse(content="Successfully updated user preferences", status_code=204)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to update user preferences: " + str(e))
+
+
+@app.get("/removeProfilePic")
+async def removeProfilePic(uid: str = Depends(verify_auth)):
+    try:
+        auth.update_user(
+            uid,
+            photo_url="")
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to remove profile picture: " + str(e))
 
 if __name__ == "__main__":
     uvicorn.run("main:app")

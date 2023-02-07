@@ -1,5 +1,6 @@
 import typing
 from pydantic import BaseModel
+from typing import Union
 
 
 class Coords(dict):
@@ -26,3 +27,9 @@ class UserObject(BaseModel):
     photoUrls: str
     radius: int
     timestamp: typing.Any
+
+
+class UserPrefsObject(BaseModel):
+    displayName: str
+    radius: int
+    photoURL: Union[str, None] = None

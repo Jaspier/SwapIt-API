@@ -246,9 +246,42 @@ async def removeProfilePic(uid: str = Depends(verify_auth)):
         auth.update_user(
             uid,
             photo_url="")
+        return JSONResponse(content="Successfully removed profile picture", status_code=204)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to remove profile picture: " + str(e))
 
 if __name__ == "__main__":
     uvicorn.run("main:app")
+
+
+@app.post("/createProfile")
+async def createProfile(profile: UserObject, uid: str = Depends(verify_auth)):
+    try:
+        res = {
+            u'message': "Successfully created/updated profile",
+            u'isNewUser': False,
+        }
+        profile_dict = FormatUserObject(profile)
+        profile_dict["timestamp"] = firestore.SERVER_TIMESTAMP
+        if (profile_dict["isNewUser"]):
+            del profile_dict["isNewUser"]
+            db.collection(u'users').document(uid).set(profile_dict)
+            res["isNewUser"] = True
+            return JSONResponse(content=res, status_code=204)
+        else:
+            doc_ref = db.collection(u'users').document(uid)
+            doc = doc_ref.get()
+            if doc.exists:
+                data = FormatFireBaseDoc(doc.to_dict())
+                radius = data["radius"]
+                profile_dict["radius"] = radius
+                coords = data["coords"]
+                profile_dict["coords"] = coords
+
+            del profile_dict["isNewUser"]
+            db.collection(u'users').document(uid).update(profile_dict)
+            return JSONResponse(content=res, status_code=204)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to create/update profile: " + str(e))

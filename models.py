@@ -27,6 +27,7 @@ class UserObject(BaseModel):
     photoUrls: str
     radius: int
     timestamp: typing.Any
+    isNewUser: typing.Optional[bool] = False
 
 
 class UserPrefsObject(BaseModel):

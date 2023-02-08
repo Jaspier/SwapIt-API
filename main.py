@@ -1,3 +1,4 @@
+from typing import List
 import uvicorn
 import firebase_admin
 import pyrebase
@@ -275,3 +276,18 @@ async def createProfile(profile: UserObject, uid: str = Depends(verify_auth)):
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to create/update profile: " + str(e))
+
+
+@app.post("/deleteMatch")
+async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
+    try:
+        db.collection(u'users').document(usersMatched[0]).collection(
+            "swipes").document(usersMatched[1]).delete()
+        db.collection(u'users').document(usersMatched[1]).collection(
+            "swipes").document(usersMatched[0]).delete()
+        db.collection(u'matches').document(GenerateId(
+            usersMatched[0], usersMatched[1])).delete()
+        return JSONResponse(content="Successfully delete match", status_code=204)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to delete match: " + str(e))

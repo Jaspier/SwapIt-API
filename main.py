@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
 from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId
-from models import Location, UserObject, UserPrefsObject
+from models import Location, UserObject, UserPrefsObject, MessageObject
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -166,6 +166,10 @@ async def swipeRight(userSwiped: UserObject, uid: str = Depends(verify_auth)):
                 u'swipes').document(userSwiped.id).set(user_swiped_dict)
 
             # Create MATCH
+            logged_in_user = auth.get_user(uid)
+            user_swiped = auth.get_user(userSwiped.id)
+            logged_in_user_dict["profilePic"] = logged_in_user.photo_url
+            user_swiped_dict["profilePic"] = user_swiped.photo_url
             db.collection(u'matches').document(GenerateId(uid, userSwiped.id)).set(
                 {
                     u'users': {
@@ -291,3 +295,20 @@ async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to delete match: " + str(e))
+
+
+@app.post("/sendMessage")
+async def sendMessage(message: MessageObject, uid: str = Depends(verify_auth)):
+    try:
+        user = auth.get_user(uid)
+        db.collection(u'matches').document(message.matchId).collection(u'messages').add({
+            u'userId': uid,
+            u'displayName': user.email if user.display_name is None else user.email,
+            u'photoUrl': user.photo_url,
+            u'message': message.message,
+            u'timestamp': firestore.SERVER_TIMESTAMP
+        })
+        return JSONResponse(content="Successfully sent message", status_code=200)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to send message: " + str(e))

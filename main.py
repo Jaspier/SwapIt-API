@@ -92,18 +92,25 @@ async def myProfile(uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to fetch profile: " + str(e))
 
 
-@app.get("/getSearchPref")
+@app.get("/getSearchPreferences")
 async def getSearchPref(uid: str = Depends(verify_auth)):
+    preferences = {}
     try:
         doc_ref = db.collection(u'users').document(uid)
         doc = doc_ref.get()
         if doc.exists:
             data = doc.to_dict()
-            prefs = {
-                "coords": data['coords'],
-                "radius": data['radius']
-            }
-            return JSONResponse(content=prefs, status_code=200)
+            preferences["coords"] = data['coords']
+            preferences["radius"] = data['radius']
+
+        passes = [doc.id for doc in db.collection(
+            u'users').document(uid).collection(u'passes').stream()]
+        swipes = [doc.id for doc in db.collection(
+            u'users').document(uid).collection(u'swipes').stream()]
+        preferences["passes"] = passes
+        preferences["swipes"] = swipes
+
+        return JSONResponse(content=preferences, status_code=200)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to fetch search preferences: " + str(e))
@@ -122,23 +129,6 @@ async def updateLocation(location: Location, uid: str = Depends(verify_auth)):
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to update location: " + str(e))
-
-
-@app.get("/getCardsFilter")
-async def getCardsFilter(uid: str = Depends(verify_auth)):
-    try:
-        passes = [doc.id for doc in db.collection(
-            u'users').document(uid).collection(u'passes').stream()]
-        swipes = [doc.id for doc in db.collection(
-            u'users').document(uid).collection(u'swipes').stream()]
-        filter = {
-            u'passes': passes,
-            u'swipes': swipes
-        }
-        return JSONResponse(content=filter, status_code=200)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail="Unable to get swipes and/or passes: " + str(e))
 
 
 @app.post("/swipeLeft")

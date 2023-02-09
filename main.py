@@ -45,24 +45,13 @@ async def verify_auth(authorization: str = Header(None)):
 
 
 @app.middleware("http")
-async def log_stuff(request: Request, call_next):
+async def log_requests(request: Request, call_next):
     logger.debug(f"{request.method} {request.url}")
     response = await call_next(request)
     logger.debug(response)
     logger.debug(response.status_code)
     print(f"INCOMING REQUEST - {request.url} {response.status_code}")
     return response
-
-# ping endpoint
-
-
-@app.post("/ping", include_in_schema=False)
-async def validate(request: Request):
-    headers = request.headers
-    jwt = headers.get('authorization')
-    print(f"jwt:{jwt}")
-    user = auth.verify_id_token(jwt)
-    return user["uid"]
 
 
 @app.get("/checkUserExists")
@@ -73,8 +62,7 @@ async def checkUserExists(uid: str = Depends(verify_auth)):
         if user.exists:
             return JSONResponse(content="User exists", status_code=200)
         else:
-            raise HTTPException(
-                status_code=404, detail="User does not exist: " + str(e))
+            return JSONResponse(content="User does not exist", status_code=404)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to fetch user: " + str(e))
@@ -153,8 +141,7 @@ async def swipeRight(userSwiped: SwipedUserObject, uid: str = Depends(verify_aut
         if doc.exists:
             logged_in_user_dict = FormatFireBaseDoc(doc.to_dict())
         else:
-            raise HTTPException(
-                status_code=400, detail="User does not exist: " + str(e))
+            return JSONResponse(content="User does not exist", status_code=404)
 
         # Check if user swiped on 'you' (TODO: Migrate to cloud function)
         swipe_ref = db.collection(u'users').document(

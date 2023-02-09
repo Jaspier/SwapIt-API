@@ -7,7 +7,7 @@ client = TestClient(app)
 
 searchPreferences = {
     'coords': {
-        'latitude': 54.7173, 'longitude': -6.2055
+        'latitude': 54.6541971, 'longitude': -5.6730648
     },
     'passes': [],
     'radius': 30,

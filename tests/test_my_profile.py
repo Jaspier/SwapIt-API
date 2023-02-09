@@ -6,15 +6,15 @@ from .mock import mock_login
 client = TestClient(app)
 
 profile = {
-    "active": True,
-    "coords": {'latitude': 54.7173, 'longitude': -6.2055},
+    "active": False,
+    "coords": {'latitude': 54.6541971, 'longitude': -5.6730648},
     "displayName": "testuser",
     "id": "QQyOyOf4dLdAN8SD4f2t3JM4g0r1",
     "itemName": "test item",
-    "location": "Antrim",
+    "location": "Testopolis",
     "photoUrls": '[{"uri":"e58470d6-10ce-48da-a681-92a4f32979fc.jpg"}]',
     "radius": 30,
-    "timestamp": "2023-02-09T19:59:47.710000+00:00"
+    "timestamp": "2023-02-09T20:42:52.686000+00:00"
 }
 
 

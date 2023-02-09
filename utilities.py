@@ -20,11 +20,15 @@ def FormatFireBaseDoc(doc: object):
 
 def FormatUserObject(userSwiped: UserObject):
     user_swiped_dict = userSwiped.dict()
-    user_swiped_dict["coords"] = userSwiped.coords.copy()
+    # user_swiped_dict["coords"] = userSwiped.coords.copy()
     if (user_swiped_dict["timestamp"] != None):
         timestamp_dict = user_swiped_dict["timestamp"]
-        timestamp = datetime.datetime.fromtimestamp(timestamp_dict["seconds"])
-        user_swiped_dict["timestamp"] = timestamp
+        try:
+            timestamp = datetime.datetime.fromtimestamp(
+                timestamp_dict["seconds"])
+            user_swiped_dict["timestamp"] = timestamp
+        except Exception:
+            return user_swiped_dict
     return user_swiped_dict
 
 

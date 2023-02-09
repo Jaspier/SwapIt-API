@@ -7,7 +7,7 @@ client = TestClient(app)
 
 
 def test_checkUserExists_with_existing_user():
-    token = mock_login("admin@test.io", "test123")
+    token = mock_login("testuser@test.io", "test123")
     response = client.get(
         "/checkUserExists", headers={"Authorization": "Bearer " + token})
     assert response.status_code == 200

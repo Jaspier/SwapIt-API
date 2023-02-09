@@ -33,3 +33,12 @@ def GenerateId(id1: str, id2: str):
         return id1 + id2
     else:
         return id2 + id1
+
+
+def GetMatchedUserInfo(users, user_logged_in):
+    new_users = {**users}
+    del new_users[user_logged_in]
+
+    (id, user) = list(new_users.items())[0]
+
+    return {'id': id, **user}

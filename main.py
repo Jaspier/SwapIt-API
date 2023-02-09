@@ -12,8 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
-from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId
-from models import Location, UserObject, UserPrefsObject, MessageObject
+from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo
+from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -145,7 +145,7 @@ async def swipeLeft(userSwiped: UserObject, uid: str = Depends(verify_auth)):
 
 
 @app.post("/swipeRight")
-async def swipeRight(userSwiped: UserObject, uid: str = Depends(verify_auth)):
+async def swipeRight(userSwiped: SwipedUserObject, uid: str = Depends(verify_auth)):
     try:
         logged_in_user_dict = None
         loggedInUser_ref = db.collection(u'users').document(uid)
@@ -312,3 +312,71 @@ async def sendMessage(message: MessageObject, uid: str = Depends(verify_auth)):
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to send message: " + str(e))
+
+
+@app.post("/confirmSwap")
+async def confirmSwap(matchedUsers: List[str], uid: str = Depends(verify_auth)):
+    try:
+        matchedUser = None
+        match_ref = db.collection(u'matches').document(
+            GenerateId(matchedUsers[0], matchedUsers[1]))
+        match = match_ref.get()
+        match_dict = match.to_dict()
+        if match.exists:
+            matchedUser = GetMatchedUserInfo(match_dict["users"], uid)
+        else:
+            return JSONResponse(content="Match does not exist!", status_code=404)
+        currentUser = match_dict["users"][uid]
+        updatedCurrentUser = {
+            **currentUser,
+            u'isConfirmed': True,
+            u'timestamp': firestore.SERVER_TIMESTAMP
+        }
+        updatedMatchedUsers = {
+            uid: updatedCurrentUser,
+            matchedUser["id"]: matchedUser
+        }
+
+        match_ref.update({
+            u'users': updatedMatchedUsers,
+            u'timestamp': firestore.SERVER_TIMESTAMP
+        })
+        return JSONResponse(content="Successfully Confirmed", status_code=200)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to confirm swap: " + str(e))
+
+
+@app.post("/cancelSwap")
+async def confirmSwap(matchedUsers: List[str], uid: str = Depends(verify_auth)):
+    try:
+        matchedUser = None
+        match_ref = db.collection(u'matches').document(
+            GenerateId(matchedUsers[0], matchedUsers[1]))
+        match = match_ref.get()
+        match_dict = match.to_dict()
+        if match.exists:
+            matchedUser = GetMatchedUserInfo(match_dict["users"], uid)
+        else:
+            return JSONResponse(content="Match does not exist!", status_code=404)
+        currentUser = match_dict["users"][uid]
+        updatedCurrentUser = {
+            **currentUser,
+            u'isConfirmed': False,
+            u'timestamp': firestore.SERVER_TIMESTAMP
+        }
+        updatedMatchedUsers = {
+            uid: updatedCurrentUser,
+            matchedUser["id"]: matchedUser
+        }
+
+        match_ref.update({
+            u'users': updatedMatchedUsers,
+            u'timestamp': firestore.SERVER_TIMESTAMP
+        })
+        return JSONResponse(content="Successfully Confirmed", status_code=200)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to confirm swap: " + str(e))

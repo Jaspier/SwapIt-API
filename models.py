@@ -30,6 +30,20 @@ class UserObject(BaseModel):
     isNewUser: typing.Optional[bool] = False
 
 
+class SwipedUserObject(BaseModel):
+    active: bool
+    coords: Coords
+    displayName: str
+    id: str
+    itemName: str
+    location: str
+    photoUrls: str
+    radius: int
+    timestamp: typing.Any
+    isNewUser: typing.Optional[bool] = False
+    profilePic: typing.Optional[str] = ""
+
+
 class UserPrefsObject(BaseModel):
     displayName: str
     radius: int

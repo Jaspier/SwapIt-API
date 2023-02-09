@@ -352,7 +352,7 @@ async def confirmSwap(matchedUsers: List[str], uid: str = Depends(verify_auth)):
             u'users': updatedMatchedUsers,
             u'timestamp': firestore.SERVER_TIMESTAMP
         })
-        return JSONResponse(content="Successfully Confirmed", status_code=200)
+        return JSONResponse(content="Successfully confirmed swap", status_code=200)
 
     except Exception as e:
         raise HTTPException(
@@ -386,8 +386,25 @@ async def confirmSwap(matchedUsers: List[str], uid: str = Depends(verify_auth)):
             u'users': updatedMatchedUsers,
             u'timestamp': firestore.SERVER_TIMESTAMP
         })
-        return JSONResponse(content="Successfully Confirmed", status_code=200)
+        return JSONResponse(content="Successfully canceled swap", status_code=200)
 
     except Exception as e:
         raise HTTPException(
-            status_code=400, detail="Failed to confirm swap: " + str(e))
+            status_code=400, detail="Failed to cancel swap: " + str(e))
+
+
+@app.get("/resetProfile")
+async def resetProfile(uid: str = Depends(verify_auth)):
+    try:
+        db.collection("users").document(uid).update({
+            "itemName": None,
+            "location": None,
+            "photoUrls": None,
+            "timestamp": firestore.SERVER_TIMESTAMP,
+            "active": False
+        })
+        return JSONResponse(content="Successfully reset profile", status_code=204)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to reset profile: " + str(e))

@@ -285,10 +285,21 @@ async def createProfile(profile: UserObject, uid: str = Depends(verify_auth)):
 @app.post("/deleteMatch")
 async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
     try:
+        # Delete Swipe for user 1
         db.collection(u'users').document(usersMatched[0]).collection(
             "swipes").document(usersMatched[1]).delete()
+        # Delete Swipe for user 2
         db.collection(u'users').document(usersMatched[1]).collection(
             "swipes").document(usersMatched[0]).delete()
+
+        # Delete Messages
+        subcollection_ref = db.collection("matches").document(
+            GenerateId(usersMatched[0], usersMatched[1])).collection("messages")
+        docs = subcollection_ref.get()
+        for doc in docs:
+            doc.reference.delete()
+
+        # Delete Match Document
         db.collection(u'matches').document(GenerateId(
             usersMatched[0], usersMatched[1])).delete()
         return JSONResponse(content="Successfully delete match", status_code=204)

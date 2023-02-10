@@ -227,14 +227,11 @@ async def removeProfilePic(uid: str = Depends(verify_auth)):
     try:
         auth.update_user(
             uid,
-            photo_url="")
+            photo_url=None)
         return JSONResponse(content="Successfully removed profile picture", status_code=204)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to remove profile picture: " + str(e))
-
-if __name__ == "__main__":
-    uvicorn.run("main:app")
 
 
 @app.post("/createProfile")
@@ -395,3 +392,6 @@ async def resetProfile(uid: str = Depends(verify_auth)):
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to reset profile: " + str(e))
+
+if __name__ == "__main__":
+    uvicorn.run("main:app")

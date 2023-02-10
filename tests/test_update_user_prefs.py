@@ -16,7 +16,6 @@ def test_update_user_prefs_successful(jwt_token):
         "/updateUserPrefs",
         headers={"Authorization": "Bearer " + jwt_token},
         json=userPrefs)
-    print(response.json())
     assert response.status_code == 204
     assert response.json() == "Successfully updated user preferences"
 

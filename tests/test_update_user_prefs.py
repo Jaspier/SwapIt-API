@@ -6,8 +6,8 @@ from .mock import mock_login
 client = TestClient(app)
 
 userPrefs = {
-    "displayName": "test",
-    "radius": 32,
+    "displayName": "testuser1",
+    "radius": 30,
     "photoURL": "https://preview.redd.it/1eboxhg5jij51.jpg?auto=webp&s=907a4ff5366b6e50eaf2f9aa2b97f5a47e02c192"
 }
 

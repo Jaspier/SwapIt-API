@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from main import app
-from .mock import mock_login
+from .conftest import mock_login
 
 client = TestClient(app)
 

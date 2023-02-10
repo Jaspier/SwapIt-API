@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
 from main import app, db
-from .mock import mock_login
 
 client = TestClient(app)
 
@@ -52,11 +51,10 @@ matchDoc = {
 }
 
 
-def test_delete_match_successful():
-    token = mock_login("testuser1@test.io", "test123")
+def test_delete_match_successful(jwt_token):
     response = client.post(
         "/deleteMatch",
-        headers={"Authorization": "Bearer " + token},
+        headers={"Authorization": "Bearer " + jwt_token},
         json=usersMatched)
     assert response.status_code == 204
     assert response.json() == "Successfully delete match"

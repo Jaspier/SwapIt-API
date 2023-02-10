@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from main import app
-from .mock import mock_login
+from .conftest import mock_login
 
 client = TestClient(app)
 
@@ -49,21 +49,19 @@ matched_user = {
 }
 
 
-def test_swipe_right():
-    token = mock_login("testuser1@test.io", "test123")
+def test_swipe_right(jwt_token):
     response = client.post(
         "/swipeRight",
-        headers={"Authorization": "Bearer " + token},
+        headers={"Authorization": "Bearer " + jwt_token},
         json=user_swiped)
     assert response.status_code == 200
     assert response.json() == "Successfully added Swipe"
 
 
-def test_swipe_right_match():
-    token = mock_login("testuser1@test.io", "test123")
+def test_swipe_right_match(jwt_token):
     response = client.post(
         "/swipeRight",
-        headers={"Authorization": "Bearer " + token},
+        headers={"Authorization": "Bearer " + jwt_token},
         json=user_matched)
 
     assert response.status_code == 201

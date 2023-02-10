@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
 from main import app
-from .mock import mock_login
 
 client = TestClient(app)
 
@@ -14,11 +13,10 @@ locationData = {
 }
 
 
-def test_update_location_successful():
-    token = mock_login("testuser1@test.io", "test123")
+def test_update_location_successful(jwt_token):
     response = client.post(
         "/updateLocation",
-        headers={"Authorization": "Bearer " + token},
+        headers={"Authorization": "Bearer " + jwt_token},
         json=locationData)
     assert response.status_code == 200
     assert response.json() == "Successfully updated location"

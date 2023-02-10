@@ -54,6 +54,19 @@ async def log_requests(request: Request, call_next):
     return response
 
 
+@app.post("/login", include_in_schema=False)
+async def login(request: Request):
+    req_json = await request.json()
+    email = req_json['email']
+    password = req_json['password']
+    try:
+        user = pb.auth().sign_in_with_email_and_password(email, password)
+        jwt = user['idToken']
+        return JSONResponse(content={'token': jwt}, status_code=200)
+    except:
+        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
+
+
 @app.get("/checkUserExists")
 async def checkUserExists(uid: str = Depends(verify_auth)):
     try:
@@ -294,6 +307,7 @@ async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
 
 @app.post("/sendMessage")
 async def sendMessage(message: MessageObject, uid: str = Depends(verify_auth)):
+    print(message)
     try:
         user = auth.get_user(uid)
         db.collection(u'matches').document(message.matchId).collection(u'messages').add({

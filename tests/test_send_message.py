@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
 from main import app
-from .mock import mock_login
 
 client = TestClient(app)
 
@@ -11,17 +10,16 @@ message = {
 }
 
 
-def test_update_existing_profile():
-    token = mock_login("testuser1@test.io", "test123")
+def test_send_message_successful(jwt_token):
     response = client.post(
         "/sendMessage",
-        headers={"Authorization": "Bearer " + token},
+        headers={"Authorization": "Bearer " + jwt_token},
         json=message)
     assert response.status_code == 200
     assert response.json() == "Successfully sent message"
 
 
-def test_create_profile_unsuccessful():
+def test_send_message_unsuccessful():
     response = client.post(
         "/sendMessage", headers={"Authorization": "Bearer fail"})
     assert response.status_code == 400

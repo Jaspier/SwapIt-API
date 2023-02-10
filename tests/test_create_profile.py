@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
 from main import app
-from .mock import mock_login
 
 client = TestClient(app)
 
@@ -24,23 +23,21 @@ res = {
 }
 
 
-def test_update_existing_profile():
-    token = mock_login("testuser1@test.io", "test123")
+def test_update_existing_profile(jwt_token):
     response = client.post(
         "/createProfile",
-        headers={"Authorization": "Bearer " + token},
+        headers={"Authorization": "Bearer " + jwt_token},
         json=profile)
     assert response.status_code == 204
     assert response.json() == res
 
 
-def test_create_new_profile():
-    token = mock_login("testuser1@test.io", "test123")
+def test_create_new_profile(jwt_token):
     profile["isNewUser"] = True
     res[u'isNewUser'] = True
     response = client.post(
         "/createProfile",
-        headers={"Authorization": "Bearer " + token},
+        headers={"Authorization": "Bearer " + jwt_token},
         json=profile)
     assert response.status_code == 204
     assert response.json() == res

@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
 from main import app
-from .mock import mock_login
 
 client = TestClient(app)
 
@@ -21,11 +20,10 @@ user_passed = {
 }
 
 
-def test_swipe_left_successful():
-    token = mock_login("testuser1@test.io", "test123")
+def test_swipe_left_successful(jwt_token):
     response = client.post(
         "/swipeLeft",
-        headers={"Authorization": "Bearer " + token},
+        headers={"Authorization": "Bearer " + jwt_token},
         json=user_passed)
     assert response.status_code == 200
     assert response.json() == "Successfully added Pass"

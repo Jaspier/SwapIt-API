@@ -1,15 +1,13 @@
 from fastapi.testclient import TestClient
 
 from main import app
-from .mock import mock_login
 
 client = TestClient(app)
 
 
-def test_remove_profile_pic_successful():
-    token = mock_login("testuser1@test.io", "test123")
+def test_remove_profile_pic_successful(jwt_token):
     response = client.get(
-        "/removeProfilePic", headers={"Authorization": "Bearer " + token})
+        "/removeProfilePic", headers={"Authorization": "Bearer " + jwt_token})
     assert response.status_code == 204
     assert response.json() == "Successfully removed profile picture"
 

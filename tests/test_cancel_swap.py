@@ -9,26 +9,26 @@ usersMatched_not_exists = [
     "pRZu4xbq35Q1vzQBwlPrcGZztqw2", "SomeRandomeSwipedUniqueIdent"]
 
 
-def test_confirm_swap_successful(jwt_token):
+def test_cancel_swap_successful(jwt_token):
     response = client.post(
-        "/confirmSwap",
+        "/cancelSwap",
         headers={"Authorization": "Bearer " + jwt_token},
         json=usersMatched)
     assert response.status_code == 200
-    assert response.json() == "Successfully confirmed swap"
+    assert response.json() == "Successfully canceled swap"
 
 
-def test_confirm_swap_match_not_exists(jwt_token):
+def test_cancel_swap_match_not_exists(jwt_token):
     response = client.post(
-        "/confirmSwap",
+        "/cancelSwap",
         headers={"Authorization": "Bearer " + jwt_token},
         json=usersMatched_not_exists)
     assert response.status_code == 404
     assert response.json() == "Match does not exist!"
 
 
-def test_confirm_swap_unsuccessful():
+def test_cancel_swap_unsuccessful():
     response = client.post(
-        "/confirmSwap", headers={"Authorization": "Bearer fail"},
+        "/cancelSwap", headers={"Authorization": "Bearer fail"},
         json=usersMatched)
     assert response.status_code == 400

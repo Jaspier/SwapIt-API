@@ -1,3 +1,4 @@
+import os
 from typing import List
 import uvicorn
 import firebase_admin
@@ -20,10 +21,12 @@ LOGGING_CONFIG_FILE = path.join(path.dirname(
 logging.config.fileConfig(LOGGING_CONFIG_FILE)
 logger = logging.getLogger('SwapIt')
 
-cred = credentials.Certificate('swapit-5eb81_service_account_keys.json')
+cred_json = os.environ.get('FIREBASE_ADMIN_SDK_CREDENTIALS')
+cred = credentials.Certificate(json.loads(cred_json))
 firebase = firebase_admin.initialize_app(cred)
 db = firestore.client()
-pb = pyrebase.initialize_app(json.load(open('firebase_config.json')))
+config_json = os.environ.get('FIREBASE_PYREBASE_CONFIG')
+pb = pyrebase.initialize_app(json.loads(config_json))
 app = FastAPI()
 allow_all = ['*']
 app.add_middleware(

@@ -13,7 +13,7 @@ REST API for handling [SwapIt](https://gitlab2.eeecs.qub.ac.uk/40253397/swapit) 
 - pip install requirements.txt
 - Create firebase_config.json file
 - Create <firebase_projectName>\_service_account_keys.json file
-- Email me for firebase credentials (check support)
+- Email me for firebase credentials (check support section)
 
 ## Local Usage
 

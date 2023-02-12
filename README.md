@@ -11,8 +11,8 @@ REST API for handling [SwapIt](https://gitlab2.eeecs.qub.ac.uk/40253397/swapit) 
 ## Installation
 
 - pip install requirements.txt
-- Create firebase_config.json file with credentials
-- Create <firebase_projectName>\_service_account_keys.json file with credentials
+- Create firebase_config.json file
+- Create <firebase_projectName>\_service_account_keys.json file
 - Email me for firebase credentials
 
 ## Local Usage

@@ -295,6 +295,25 @@ async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to delete match: " + str(e))
 
 
+@app.post("/deactivateMatches")
+async def deleteMatch(request: Request, uid: str = Depends(verify_auth)):
+    try:
+        item = await request.json()
+        collection_ref = db.collection(u'matches')
+        query = collection_ref.where(
+            u'users.' + uid + '.itemName', u'==', item)
+        docs = [doc.id for doc in query.stream()]
+
+        for doc in docs:
+            db.collection(u'matches').document(doc).update({
+                u'deactivated': True
+            })
+        return JSONResponse(content="Successfully deactivated matches", status_code=200)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to deactivate matches: " + str(e))
+
+
 @app.post("/sendMessage")
 async def sendMessage(message: MessageObject, uid: str = Depends(verify_auth)):
     try:

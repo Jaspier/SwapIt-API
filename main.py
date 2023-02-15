@@ -296,7 +296,7 @@ async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
 
 
 @app.post("/deactivateMatches")
-async def deleteMatch(request: Request, uid: str = Depends(verify_auth)):
+async def deactivateMatches(request: Request, uid: str = Depends(verify_auth)):
     try:
         item = await request.json()
         collection_ref = db.collection(u'matches')

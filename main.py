@@ -320,7 +320,7 @@ async def sendMessage(message: MessageObject, uid: str = Depends(verify_auth)):
         user = auth.get_user(uid)
         db.collection(u'matches').document(message.matchId).collection(u'messages').add({
             u'userId': uid,
-            u'displayName': user.email if user.display_name is None else user.email,
+            u'displayName': user.email if user.display_name is None else user.display_name,
             u'photoUrl': user.photo_url,
             u'message': message.message,
             u'timestamp': firestore.SERVER_TIMESTAMP

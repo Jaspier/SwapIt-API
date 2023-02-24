@@ -5,6 +5,7 @@ before_script:
 
 stages:
   - test
+  - deploy
 
 test:
   stage: test
@@ -13,3 +14,15 @@ test:
   artifacts:
     paths:
       - htmlcov/
+
+deploy:
+  stage: deploy
+  image: ruby:latest
+  script:
+  - apt-get update -qy
+  - apt-get install -y ruby-dev
+  - gem install dpl
+  - dpl --provider=heroku --app=swapit-api --api-key=$HEROKU_API_KEY
+  only:
+  - main
+

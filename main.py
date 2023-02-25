@@ -418,13 +418,18 @@ async def storeDeviceToken(res: DeviceTokenObject, uid: str = Depends(verify_aut
     try:
         doc_ref = db.collection('users').document(uid)
         doc_snapshot = doc_ref.get()
-        device_token = doc_snapshot.get('deviceToken')
-        if (device_token is not None and device_token == res.token):
-            return JSONResponse(content="Device token already saved.", status_code=200)
+        if doc_snapshot.exists and 'deviceToken' in doc_snapshot.to_dict():
+            device_token = doc_snapshot.get('deviceToken')
+            if device_token == res.token:
+                return JSONResponse(content="Device token already saved.", status_code=200)
+            else:
+                doc_ref.update({
+                    "deviceToken": res.token
+                })
         else:
-            db.collection("users").document(uid).update({
+            doc_ref.set({
                 "deviceToken": res.token
-            })
+            }, merge=True)
         return JSONResponse(content="Successfully stored device token", status_code=200)
 
     except Exception as e:

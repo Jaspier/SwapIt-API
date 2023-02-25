@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
 from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo
-from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject
+from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, DeviceTokenObject
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -55,6 +55,19 @@ async def log_requests(request: Request, call_next):
     logger.debug(response.status_code)
     print(f"INCOMING REQUEST - {request.url} {response.status_code}")
     return response
+
+
+@app.post("/login", include_in_schema=False)
+async def login(request: Request):
+    req_json = await request.json()
+    email = req_json['email']
+    password = req_json['password']
+    try:
+        user = pb.auth().sign_in_with_email_and_password(email, password)
+        jwt = user['idToken']
+        return JSONResponse(content={'token': jwt}, status_code=200)
+    except:
+        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
 
 
 @app.get("/checkUserExists")
@@ -398,6 +411,26 @@ async def resetProfile(uid: str = Depends(verify_auth)):
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to reset profile: " + str(e))
+
+
+@app.post("/storeDeviceToken")
+async def storeDeviceToken(res: DeviceTokenObject, uid: str = Depends(verify_auth)):
+    try:
+        doc_ref = db.collection('users').document(uid)
+        doc_snapshot = doc_ref.get()
+        device_token = doc_snapshot.get('deviceToken')
+        if (device_token is not None and device_token == res.token):
+            return JSONResponse(content="Device token already saved.", status_code=200)
+        else:
+            db.collection("users").document(uid).update({
+                "deviceToken": res.token
+            })
+        return JSONResponse(content="Successfully stored device token", status_code=200)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to store push token: " + str(e)
+        )
 
 if __name__ == "__main__":
     uvicorn.run("main:app")

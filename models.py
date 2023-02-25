@@ -52,3 +52,7 @@ class UserPrefsObject(BaseModel):
 class MessageObject(BaseModel):
     matchId: str
     message: str
+
+
+class DeviceTokenObject(BaseModel):
+    token: str

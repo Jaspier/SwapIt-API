@@ -47,7 +47,6 @@ class SwipedUserObject(BaseModel):
 class UserPrefsObject(BaseModel):
     displayName: str
     radius: int
-    photoURL: Union[str, None] = None
 
 
 class MessageObject(BaseModel):

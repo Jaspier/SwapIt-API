@@ -196,45 +196,29 @@ async def getSearchRadius(uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to fetch search radius: " + str(e))
 
 
-@app.post("/updateUserPrefs")
-async def updateUserDetails(userDetails: UserPrefsObject, uid: str = Depends(verify_auth)):
+@app.post("/updateUserPreferences")
+async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verify_auth)):
     try:
-        auth.update_user(
-            uid,
-            display_name=userDetails.displayName,
-            photo_url=userDetails.photoURL)
         user_ref = db.collection(u'users').document(uid)
         user = user_ref.get()
         if user.exists:
             prefs_ref = db.collection(u'users').document(uid)
             prefs_ref.update({
-                u'displayName': userDetails.displayName,
-                u'radius': userDetails.radius,
+                u'displayName': prefs.displayName,
+                u'radius': prefs.radius,
                 u'timestamp': firestore.SERVER_TIMESTAMP
             })
         else:
             db.collection(u'users').document(uid).set({
                 u'id': uid,
-                u'displayName': userDetails.displayName,
-                u'radius': userDetails.radius,
+                u'displayName': prefs.displayName,
+                u'radius': prefs.radius,
                 u'timestamp': firestore.SERVER_TIMESTAMP
             })
         return JSONResponse(content="Successfully updated user preferences", status_code=204)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to update user preferences: " + str(e))
-
-
-@app.get("/removeProfilePic")
-async def removeProfilePic(uid: str = Depends(verify_auth)):
-    try:
-        auth.update_user(
-            uid,
-            photo_url=None)
-        return JSONResponse(content="Successfully removed profile picture", status_code=204)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail="Failed to remove profile picture: " + str(e))
 
 
 @app.post("/createProfile")

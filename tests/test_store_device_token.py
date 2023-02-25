@@ -9,11 +9,6 @@ device_token = {
     "token": "MyDeviceToken"
 }
 
-# Delete deviceToken field if exists before running tests
-db.collection("users").document("FlGdc4N4CyMAyKDfNJEHrcGGGRa2").update({
-    "deviceToken": firestore.DELETE_FIELD,
-})
-
 
 def test_store_device_token_successful(jwt_token):
     response = client.post(
@@ -38,3 +33,7 @@ def test_confirm_swap_unsuccessful():
         "/storeDeviceToken", headers={"Authorization": "Bearer fail"},
         json=device_token)
     assert response.status_code == 400
+    # Delete deviceToken field if exists after running tests
+    db.collection("users").document("FlGdc4N4CyMAyKDfNJEHrcGGGRa2").update({
+        u'deviceToken': firestore.DELETE_FIELD
+    })

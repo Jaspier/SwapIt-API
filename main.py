@@ -12,9 +12,11 @@ from fastapi import FastAPI, Request, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
+from exponent_server_sdk import PushClient
+from exponent_server_sdk import PushMessage
 
 from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo
-from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, DeviceTokenObject
+from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, DeviceTokenObject, NotificationObject
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -436,6 +438,41 @@ async def storeDeviceToken(res: DeviceTokenObject, uid: str = Depends(verify_aut
         raise HTTPException(
             status_code=400, detail="Failed to store push token: " + str(e)
         )
+
+
+@app.post("/sendPushNotification")
+async def sendPushNotification(notification: NotificationObject, uid: str = Depends(verify_auth)):
+    device_token = None
+    doc_ref = db.collection("users").document(
+        notification.matchedUsers.userSwiped.id)
+    doc_snapshot = doc_ref.get()
+    if doc_snapshot.exists:
+        device_token = doc_snapshot.get("deviceToken")
+    else:
+        return JSONResponse(content="Matched user does not exist.", status_code=400)
+    push_client = PushClient()
+
+    data = {
+        "type": notification.type,
+        "loggedInProfile": notification.matchedUsers.userSwiped.dict(),
+        "userSwiped": notification.matchedUsers.loggedInProfile.dict()
+    }
+    if notification.type == "match":
+        title = "New Match"
+        body = "You have a new match!"
+
+    try:
+        # Send the notification
+        response = push_client.publish(
+            PushMessage(to=device_token, data=data,
+                        title=title, body=body)
+        )
+        return JSONResponse(content=response, status_code=200)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to send notification: " + str(e)
+        )
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app")

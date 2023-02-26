@@ -63,8 +63,13 @@ class MatchObject(BaseModel):
     userSwiped: UserObject
 
 
+class MessageObject(BaseModel):
+    message: str
+    sender: SwipedUserObject
+    receiverId: str
+
+
 class NotificationObject(BaseModel):
     type: str
-    matchedUsers: typing.Optional[MatchObject] = None
-    message: typing.Optional[str] = ""
-    matchId: typing.Optional[str] = ""
+    matchObj: typing.Optional[MatchObject] = None
+    messageObj: typing.Optional[MessageObject] = None

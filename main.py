@@ -442,25 +442,37 @@ async def storeDeviceToken(res: DeviceTokenObject, uid: str = Depends(verify_aut
 
 @app.post("/sendPushNotification")
 async def sendPushNotification(notification: NotificationObject, uid: str = Depends(verify_auth)):
-    device_token = None
-    doc_ref = db.collection("users").document(
-        notification.matchedUsers.userSwiped.id)
-    doc_snapshot = doc_ref.get()
-    if doc_snapshot.exists:
-        device_token = doc_snapshot.get("deviceToken")
-    else:
-        return JSONResponse(content="Matched user does not exist.", status_code=400)
-    push_client = PushClient()
-
-    data = {
-        "type": notification.type,
-        "loggedInProfile": notification.matchedUsers.userSwiped.dict(),
-        "userSwiped": notification.matchedUsers.loggedInProfile.dict()
-    }
     if notification.type == "match":
+        doc_ref = db.collection("users").document(
+            notification.matchObj.userSwiped.id)
+        doc_snapshot = doc_ref.get()
+        if doc_snapshot.exists:
+            device_token = doc_snapshot.get("deviceToken")
+        else:
+            return JSONResponse(content="Matched user does not exist.", status_code=400)
+
         title = "New Match"
         body = "You have a new match!"
-
+        data = {
+            "type": notification.type,
+            "loggedInProfile": notification.matchObj.userSwiped.dict(),
+            "userSwiped": notification.matchObj.loggedInProfile.dict()
+        }
+    elif notification.type == "message":
+        doc_ref = db.collection("users").document(
+            notification.messageObj.receiverId)
+        doc_snapshot = doc_ref.get()
+        if doc_snapshot.exists:
+            device_token = doc_snapshot.get("deviceToken")
+        else:
+            return JSONResponse(content="Receiver does not exist.", status_code=400)
+        title = "New Message"
+        body = "You got a new message!"
+        data = {
+            "type": notification.type,
+            "message": notification.messageObj.dict()
+        }
+    push_client = PushClient()
     try:
         # Send the notification
         response = push_client.publish(

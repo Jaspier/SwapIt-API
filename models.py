@@ -58,12 +58,17 @@ class DeviceTokenObject(BaseModel):
     token: str
 
 
-class MatchObject(BaseModel):
+class MessageObject(BaseModel):
+    matchId: str
+    message: str
+
+
+class MatchNotificationObject(BaseModel):
     loggedInProfile: UserObject
     userSwiped: UserObject
 
 
-class MessageObject(BaseModel):
+class MessageNotificationObject(BaseModel):
     message: str
     sender: SwipedUserObject
     receiverId: str
@@ -71,5 +76,5 @@ class MessageObject(BaseModel):
 
 class NotificationObject(BaseModel):
     type: str
-    matchObj: typing.Optional[MatchObject] = None
-    messageObj: typing.Optional[MessageObject] = None
+    matchObj: typing.Optional[MatchNotificationObject] = None
+    messageObj: typing.Optional[MessageNotificationObject] = None

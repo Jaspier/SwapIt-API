@@ -5,64 +5,47 @@ from .conftest import mock_login
 
 client = TestClient(app)
 
-match = {
-    "type": "match",
-    "matchObj": {
-        "loggedInProfile": {
-            "active": False,
-            "coords": {
-                "latitude": 54.591379,
-                "longitude": -5.69317
-            },
-            "displayName": "user@swiped.io",
-            "id": "SomeRandomSwipedUserIdentifier",
-            "itemName": "a nice item",
-            "location": "wonderland",
-            "photoUrls": '[{"uri":"e58470d6-10ce-48da-a681-92a4f32979fc.jpg"}]',
-            "profilePic": "",
-            "radius": 27,
-            "timestamp": '2023-02-09T20:42:52.686000+00:00',
-            "isNewUser": False,
-        },
-        "userSwiped": {
-            "active": False,
-            "coords": {
-                "latitude": 54.6541971,
-                "longitude": -5.6730648,
-            },
-            "displayName": "testuser",
-            "id": "QQyOyOf4dLdAN8SD4f2t3JM4g0r1",
-            "deviceToken": "ExponentPushToken[BtpUlRN8i23S_vhK7np6xH]",
-            "itemName": "test item",
-            "location": "Testopolis",
-            "photoUrls": "[{\"uri\":\"e58470d6-10ce-48da-a681-92a4f32979fc.jpg\"}]",
-            "radius": 30,
-            "timestamp": "2023-02-09T20:42:52.686000+00:00"
-        }
-    }
-}
-
-message = {
+notification = {
     "type": "message",
-    "messageObj": {
-        "message": "Hello from test!",
-        "receiverId": "QQyOyOf4dLdAN8SD4f2t3JM4g0r1",
-        "sender": {
-            "active": False,
-            "coords": {
-                "latitude": 54.591379,
-                "longitude": -5.69317
+    "matchDetails": {
+        "id": "QQyOyOf4dLdAN8SD4f2t3JM4g0r1FlGdc4N4CyMAyKDfNJEHrcGGGRa2",
+        "timestamp": "2023-02-09T20:42:52.686000+00:00",
+        "users": {
+            "FlGdc4N4CyMAyKDfNJEHrcGGGRa2": {
+                "active": False,
+                "coords": {
+                    "latitude": 54.6541971,
+                    "longitude": -5.6730648
+                },
+                "displayName": "testuser1",
+                "id": "FlGdc4N4CyMAyKDfNJEHrcGGGRa2",
+                "itemName": "test1 item",
+                "location": "New Testopolis",
+                "photoUrls": "[{\"uri\":\"e58470d6-10ce-48da-a681-92a4f32979fc.jpg\"}]",
+                "profilePic": "https://preview.redd.it/1eboxhg5jij51.jpg?auto=webp&s=907a4ff5366b6e50eaf2f9aa2b97f5a47e02c192",
+                "radius": 30,
+                "timestamp": "2023-02-09T20:42:52.686000+00:00"
             },
-            "displayName": "user@swiped.io",
-            "id": "SomeRandomSwipedUserIdentifier",
-            "itemName": "a nice item",
-            "location": "wonderland",
-            "photoUrls": '[{"uri":"e58470d6-10ce-48da-a681-92a4f32979fc.jpg"}]',
-            "profilePic": "",
-            "radius": 27,
-            "timestamp": "2023-02-09T20:42:52.686000+00:00"
-        }
-    }
+            "QQyOyOf4dLdAN8SD4f2t3JM4g0r1": {
+                "active": False,
+                "coords": {
+                    "latitude": 54.6541971,
+                    "longitude": -5.6730648
+                },
+                "displayName": "testuser",
+                "id": "QQyOyOf4dLdAN8SD4f2t3JM4g0r1",
+                "itemName": "test item",
+                "location": "Testopolis",
+                "photoUrls": "[{\"uri\":\"e58470d6-10ce-48da-a681-92a4f32979fc.jpg\"}]",
+                "profilePic": "",
+                "radius": 30,
+                "timestamp": "2023-02-09T20:42:52.686000+00:00"
+            }
+        },
+        "usersMatched": ["QQyOyOf4dLdAN8SD4f2t3JM4g0r1", "FlGdc4N4CyMAyKDfNJEHrcGGGRa2"],
+        "deactivated": False
+    },
+    "message": "test"
 }
 
 expected_device_token_not_exists = {
@@ -70,43 +53,32 @@ expected_device_token_not_exists = {
     "message": '"ExponentPushToken[BtpUlRN8i23S_vhK7np6xH]" is not a registered push notification recipient'}
 
 
-def test_send_push_notification_message_device_token_not_exists():
-    token = mock_login("testuser@test.io", "test123")
+def test_send_push_notification_message_device_token_not_exists(jwt_token):
     response = client.post(
         "/sendPushNotification",
-        headers={"Authorization": "Bearer " + token},
-        json=message)
+        headers={"Authorization": "Bearer " + jwt_token},
+        json=notification)
     assert response.status_code == 200
     assert response.json() == expected_device_token_not_exists
 
 
-def test_send_push_notification_match_device_token_not_exists():
-    token = mock_login("testuser@test.io", "test123")
+def test_send_push_notification_match_device_token_not_exists(jwt_token):
+    notification["type"] = "match"
     response = client.post(
         "/sendPushNotification",
-        headers={"Authorization": "Bearer " + token},
-        json=match)
+        headers={"Authorization": "Bearer " + jwt_token},
+        json=notification)
     assert response.status_code == 200
     assert response.json() == expected_device_token_not_exists
 
 
-def test_send_push_notification_match_user_not_exists(jwt_token):
-    match["matchObj"]["userSwiped"]["id"] = "NotExists"
+def test_send_push_notification_receiver_not_exists(jwt_token):
+    notification["matchDetails"]["users"]["QQyOyOf4dLdAN8SD4f2t3JM4g0r1"]["id"] = "NotExists"
+    notification["type"] = "message"
     response = client.post(
         "/sendPushNotification",
         headers={"Authorization": "Bearer " + jwt_token},
-        json=match)
-
-    assert response.status_code == 400
-    assert response.json() == "Matched user does not exist"
-
-
-def test_send_push_notification_message_receiver_not_exists(jwt_token):
-    message["messageObj"]["receiverId"] = "NotExists"
-    response = client.post(
-        "/sendPushNotification",
-        headers={"Authorization": "Bearer " + jwt_token},
-        json=message)
+        json=notification)
 
     assert response.status_code == 400
     assert response.json() == "Receiver does not exist"

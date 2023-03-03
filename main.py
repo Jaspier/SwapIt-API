@@ -429,35 +429,37 @@ async def storeDeviceToken(res: DeviceTokenObject, uid: str = Depends(verify_aut
 
 @app.post("/sendPushNotification")
 async def sendPushNotification(notification: NotificationObject, uid: str = Depends(verify_auth)):
-    if notification.type == "match":
-        doc_ref = db.collection("users").document(
-            notification.matchObj.userSwiped.id)
-        doc_snapshot = doc_ref.get()
-        if doc_snapshot.exists:
-            device_token = doc_snapshot.get("deviceToken")
-        else:
-            return JSONResponse(content="Matched user does not exist", status_code=400)
+    receiver = GetMatchedUserInfo(
+        notification.matchDetails.users, uid)
 
+    doc_ref = db.collection("users").document(receiver["id"])
+    doc_snapshot = doc_ref.get()
+    if doc_snapshot.exists:
+        device_token = doc_snapshot.get("deviceToken")
+    else:
+        return JSONResponse(content="Receiver does not exist", status_code=400)
+    if notification.type == "match":
         title = "New Match"
         body = "You have a new match!"
         data = {
             "type": notification.type,
-            "loggedInProfile": notification.matchObj.userSwiped.dict(),
-            "userSwiped": notification.matchObj.loggedInProfile.dict()
+            "match": {
+                "loggedInProfile": notification.matchDetails.users[uid].dict(),
+                "userSwiped": notification.matchDetails.users[receiver["id"]].dict(),
+                "matchDetails": notification.matchDetails.dict()
+            }
         }
     elif notification.type == "message":
-        doc_ref = db.collection("users").document(
-            notification.messageObj.receiverId)
-        doc_snapshot = doc_ref.get()
-        if doc_snapshot.exists:
-            device_token = doc_snapshot.get("deviceToken")
-        else:
-            return JSONResponse(content="Receiver does not exist", status_code=400)
         title = "New Message"
         body = "You got a new message!"
         data = {
             "type": notification.type,
-            "message": notification.messageObj.dict()
+            "message": {
+                "message": notification.message,
+                "sender": notification.matchDetails.users[uid].dict(),
+                "receiverId": receiver["id"],
+                "matchDetails": notification.matchDetails.dict()
+            }
         }
     push_client = PushClient()
     try:

@@ -1,6 +1,5 @@
 import typing
 from pydantic import BaseModel
-from typing import Union
 
 
 class Coords(dict):
@@ -58,23 +57,15 @@ class DeviceTokenObject(BaseModel):
     token: str
 
 
-class MessageObject(BaseModel):
-    matchId: str
-    message: str
-
-
-class MatchNotificationObject(BaseModel):
-    loggedInProfile: UserObject
-    userSwiped: UserObject
-
-
-class MessageNotificationObject(BaseModel):
-    message: str
-    sender: SwipedUserObject
-    receiverId: str
+class MatchObject(BaseModel):
+    id: str
+    timestamp: typing.Optional[typing.Any]
+    users: typing.Dict[str, SwipedUserObject]
+    usersMatched: typing.List[str]
+    deactivated: typing.Optional[bool] = False
 
 
 class NotificationObject(BaseModel):
     type: str
-    matchObj: typing.Optional[MatchNotificationObject] = None
-    messageObj: typing.Optional[MessageNotificationObject] = None
+    matchDetails: MatchObject
+    message: typing.Optional[str] = ""

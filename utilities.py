@@ -1,7 +1,5 @@
-import re
-import json
 import datetime
-from models import UserObject
+from models import UserObject, SwipedUserObject
 
 
 def FormatFireBaseDoc(doc: object):
@@ -33,7 +31,12 @@ def GenerateId(id1: str, id2: str):
 
 
 def GetMatchedUserInfo(users, user_logged_in):
-    new_users = {**users}
+    new_users = {}
+    for key, value in users.items():
+        if isinstance(value, SwipedUserObject):
+            value = value.__dict__
+        new_users[key] = value
+
     del new_users[user_logged_in]
 
     (id, user) = list(new_users.items())[0]

@@ -445,9 +445,9 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
             "type": notification.type,
             "match": {
                 "loggedInProfile": notification.matchDetails.users[uid].dict(),
-                "userSwiped": notification.matchDetails.users[receiver["id"]].dict(),
-                "matchDetails": notification.matchDetails.dict()
-            }
+                "userSwiped": notification.matchDetails.users[receiver["id"]].dict()
+            },
+            "matchDetails": notification.matchDetails.dict()
         }
     elif notification.type == "message":
         title = "New Message"
@@ -457,9 +457,9 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
             "message": {
                 "message": notification.message,
                 "sender": notification.matchDetails.users[uid].dict(),
-                "receiverId": receiver["id"],
-                "matchDetails": notification.matchDetails.dict()
-            }
+                "receiverId": receiver["id"]
+            },
+            "matchDetails": notification.matchDetails.dict()
         }
     push_client = PushClient()
     try:

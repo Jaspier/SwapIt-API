@@ -53,10 +53,6 @@ class MessageObject(BaseModel):
     message: str
 
 
-class DeviceTokenObject(BaseModel):
-    token: str
-
-
 class MatchObject(BaseModel):
     id: str
     timestamp: typing.Optional[typing.Any]

@@ -16,7 +16,7 @@ from exponent_server_sdk import PushClient
 from exponent_server_sdk import PushMessage
 
 from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo
-from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, DeviceTokenObject, NotificationObject
+from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, NotificationObject
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -57,6 +57,19 @@ async def log_requests(request: Request, call_next):
     logger.debug(response.status_code)
     print(f"INCOMING REQUEST - {request.url} {response.status_code}")
     return response
+
+
+@app.post("/login", include_in_schema=False)
+async def login(request: Request):
+    req_json = await request.json()
+    email = req_json['email']
+    password = req_json['password']
+    try:
+        user = pb.auth().sign_in_with_email_and_password(email, password)
+        jwt = user['idToken']
+        return JSONResponse(content={'token': jwt}, status_code=200)
+    except:
+        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
 
 
 @app.get("/checkUserExists")
@@ -281,23 +294,40 @@ async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to delete match: " + str(e))
 
 
-@app.post("/deactivateMatches")
-async def deactivateMatches(request: Request, uid: str = Depends(verify_auth)):
+@app.post("/deleteMatches")
+async def deleteMatches(request: Request, uid: str = Depends(verify_auth)):
     try:
         item = await request.json()
         collection_ref = db.collection(u'matches')
         query = collection_ref.where(
             u'users.' + uid + '.itemName', u'==', item)
-        docs = [doc.id for doc in query.stream()]
+        docs = [doc.to_dict() for doc in query.stream()]
 
         for doc in docs:
-            db.collection(u'matches').document(doc).update({
-                u'deactivated': True
-            })
-        return JSONResponse(content="Successfully deactivated matches", status_code=200)
+            users_matched = doc["usersMatched"]
+            match_id = GenerateId(users_matched[0], users_matched[1])
+            # Delete swipes
+            db.collection(u'users').document(users_matched[0]).collection(
+                "swipes").document(users_matched[1]).delete()
+            db.collection(u'users').document(users_matched[1]).collection(
+                "swipes").document(users_matched[0]).delete()
+
+            # Delete messages
+            subcollection_ref = db.collection("matches").document(
+                match_id).collection("messages")
+            docs = subcollection_ref.get()
+            for doc in docs:
+                doc.reference.delete()
+
+            # Delete match
+            db.collection(u'matches').document(match_id).delete()
+
+        return JSONResponse(content="Successfully deleted matches", status_code=200)
+
     except Exception as e:
         raise HTTPException(
-            status_code=400, detail="Failed to deactivate matches: " + str(e))
+            status_code=400, detail="Failed to delete matches: " + str(e)
+        )
 
 
 @app.post("/sendMessage")
@@ -403,21 +433,22 @@ async def resetProfile(uid: str = Depends(verify_auth)):
 
 
 @app.post("/storeDeviceToken")
-async def storeDeviceToken(res: DeviceTokenObject, uid: str = Depends(verify_auth)):
+async def storeDeviceToken(request: Request, uid: str = Depends(verify_auth)):
     try:
+        token = await request.json()
         doc_ref = db.collection('users').document(uid)
         doc_snapshot = doc_ref.get()
         if doc_snapshot.exists and 'deviceToken' in doc_snapshot.to_dict():
             device_token = doc_snapshot.get('deviceToken')
-            if device_token == res.token:
+            if device_token == token:
                 return JSONResponse(content="Device token already saved.", status_code=200)
             else:
                 doc_ref.update({
-                    "deviceToken": res.token
+                    "deviceToken": token
                 })
         else:
             doc_ref.set({
-                "deviceToken": res.token
+                "deviceToken": token
             }, merge=True)
         return JSONResponse(content="Successfully stored device token", status_code=200)
 

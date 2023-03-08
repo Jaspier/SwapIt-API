@@ -520,6 +520,8 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
 @app.post("/sendManyPushNotifications")
 async def sendPushNotification(notifications: ManyNotificationsObject, uid: str = Depends(verify_auth)):
     push_client = PushClient()
+    notified = []
+    not_notified = []
     for notification in notifications.notifications:
         device_token = None
         notification_dict = notification.dict()
@@ -533,6 +535,7 @@ async def sendPushNotification(notifications: ManyNotificationsObject, uid: str 
             device_token = doc_snapshot["deviceToken"]
         else:
             print(f"Receiver {receiver_id} device token does not exist")
+            not_notified.append(receiver_id)
         if notifications.type == "delete":
             title = "Match Deleted"
             body = f"{sender} swapped with someone else :("
@@ -548,11 +551,17 @@ async def sendPushNotification(notifications: ManyNotificationsObject, uid: str 
                     PushMessage(to=device_token, data=data,
                                 title=title, body=body)
                 )
+                notified.append(receiver_id)
         except Exception as e:
             print(
                 f"Failed to send notification for device token {device_token}: {str(e)}")
+            notified.append(receiver_id)
 
-    return JSONResponse(content="Notifications sent", status_code=200)
+    res = {
+        "notified": notified,
+        "failedToNotify": not_notified
+    }
+    return JSONResponse(content=res, status_code=200)
 
 
 if __name__ == "__main__":

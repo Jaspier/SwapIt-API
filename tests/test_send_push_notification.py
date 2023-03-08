@@ -90,7 +90,7 @@ def test_send_push_notification_receiver_device_token_not_exists(jwt_token):
     })
 
 
-def test_swipe_right_unsuccessful():
+def test_send_push_notification_unsuccessful():
     response = client.post(
         "/sendPushNotification",
         headers={"Authorization": "Bearer fail"})

@@ -465,29 +465,31 @@ async def storeDeviceToken(request: Request, uid: str = Depends(verify_auth)):
 @app.post("/sendPushNotification")
 async def sendPushNotification(notification: NotificationObject, uid: str = Depends(verify_auth)):
 
-    receiverId = GetMatchedUserInfo(
+    receiver_id = GetMatchedUserInfo(
         notification.matchDetails.users, uid)["id"]
 
-    doc_ref = db.collection("users").document(receiverId)
+    sender_name = notification.matchDetails.users[uid].displayName
+
+    doc_ref = db.collection("users").document(receiver_id)
     doc_snapshot = doc_ref.get()
     if doc_snapshot.exists:
         device_token = doc_snapshot.get("deviceToken")
     else:
         return JSONResponse(content="Receiver does not exist", status_code=400)
     if notification.type == "match":
-        title = "New Match"
-        body = "You have a new match!"
+        title = "New Swap Partner!"
+        body = f"{sender_name} wants to swap with you!"
         data = {
             "type": notification.type,
             "match": {
                 "loggedInProfile": notification.matchDetails.users[uid].dict(),
-                "userSwiped": notification.matchDetails.users[receiverId].dict()
+                "userSwiped": notification.matchDetails.users[receiver_id].dict()
             },
             "matchDetails": notification.matchDetails.dict()
         }
     elif notification.type == "message":
         title = "New Message"
-        body = "You got a new message!"
+        body = f"{sender_name} sent you a message!"
         data = {
             "type": notification.type,
             "message": {
@@ -521,11 +523,11 @@ async def sendPushNotification(notifications: ManyNotificationsObject, uid: str 
     for notification in notifications.notifications:
         device_token = None
         notification_dict = notification.dict()
-        receiverId = notification_dict["receiverId"]
+        receiver_id = notification_dict["receiverId"]
         sender = notification_dict["sender"]
 
         doc_ref = db.collection("users").document(
-            receiverId)
+            receiver_id)
         doc_snapshot = doc_ref.get().to_dict()
         if "deviceToken" in doc_snapshot:
             device_token = doc_snapshot["deviceToken"]
@@ -533,7 +535,7 @@ async def sendPushNotification(notifications: ManyNotificationsObject, uid: str 
             print("Receiver device token does not exist")
         if notifications.type == "delete":
             title = "Match Deleted"
-            body = "Your swap partner swapped with someone else :("
+            body = f"{sender} swapped with someone else :("
             data = {
                 "type": notifications.type,
                 "title": "Match Deleted",
@@ -542,11 +544,10 @@ async def sendPushNotification(notifications: ManyNotificationsObject, uid: str 
         try:
             # Send notifications
             if device_token:
-                response = push_client.publish(
+                push_client.publish(
                     PushMessage(to=device_token, data=data,
                                 title=title, body=body)
                 )
-                print(response)
         except Exception as e:
             print(
                 f"Failed to send notification for device token {device_token}: " + str(e))

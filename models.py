@@ -61,7 +61,22 @@ class MatchObject(BaseModel):
     deactivated: typing.Optional[bool] = False
 
 
+class SimpleNotificationObject(BaseModel):
+    sender: str
+    receiverId: str
+
+
+class ManyNotificationsObject(BaseModel):
+    type: str
+    notifications: typing.List[SimpleNotificationObject]
+
+
 class NotificationObject(BaseModel):
     type: str
     matchDetails: MatchObject
     message: typing.Optional[str] = ""
+
+
+class DeleteMatchesObject(BaseModel):
+    itemName: str
+    matchedUserId: str

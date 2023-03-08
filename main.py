@@ -16,7 +16,7 @@ from exponent_server_sdk import PushClient
 from exponent_server_sdk import PushMessage
 
 from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo
-from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, NotificationObject
+from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, NotificationObject, ManyNotificationsObject, DeleteMatchesObject
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -57,19 +57,6 @@ async def log_requests(request: Request, call_next):
     logger.debug(response.status_code)
     print(f"INCOMING REQUEST - {request.url} {response.status_code}")
     return response
-
-
-@app.post("/login", include_in_schema=False)
-async def login(request: Request):
-    req_json = await request.json()
-    email = req_json['email']
-    password = req_json['password']
-    try:
-        user = pb.auth().sign_in_with_email_and_password(email, password)
-        jwt = user['idToken']
-        return JSONResponse(content={'token': jwt}, status_code=200)
-    except:
-        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
 
 
 @app.get("/checkUserExists")
@@ -295,14 +282,14 @@ async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
 
 
 @app.post("/deleteMatches")
-async def deleteMatches(request: Request, uid: str = Depends(verify_auth)):
+async def deleteMatches(payload: DeleteMatchesObject, uid: str = Depends(verify_auth)):
     try:
-        item = await request.json()
         collection_ref = db.collection(u'matches')
         query = collection_ref.where(
-            u'users.' + uid + '.itemName', u'==', item)
+            u'users.' + uid + '.itemName', u'==', payload.itemName)
         docs = [doc.to_dict() for doc in query.stream()]
 
+        all_users_matched = []
         for doc in docs:
             users_matched = doc["usersMatched"]
             match_id = GenerateId(users_matched[0], users_matched[1])
@@ -319,10 +306,27 @@ async def deleteMatches(request: Request, uid: str = Depends(verify_auth)):
             for doc in docs:
                 doc.reference.delete()
 
+            all_users_matched.extend(users_matched)
+
             # Delete match
             db.collection(u'matches').document(match_id).delete()
 
-        return JSONResponse(content="Successfully deleted matches", status_code=200)
+        users_to_notify = []
+        user = auth.get_user(uid)
+        for userId in all_users_matched:
+            if userId != uid and userId != payload.matchedUserId:
+                notification_object = {
+                    "sender": user.display_name,
+                    "receiverId": userId
+                }
+                users_to_notify.append(notification_object)
+
+        notifications_object = {
+            "type": "delete",
+            "notifications": users_to_notify
+        }
+
+        return JSONResponse(content=notifications_object, status_code=200)
 
     except Exception as e:
         raise HTTPException(
@@ -460,10 +464,11 @@ async def storeDeviceToken(request: Request, uid: str = Depends(verify_auth)):
 
 @app.post("/sendPushNotification")
 async def sendPushNotification(notification: NotificationObject, uid: str = Depends(verify_auth)):
-    receiver = GetMatchedUserInfo(
-        notification.matchDetails.users, uid)
 
-    doc_ref = db.collection("users").document(receiver["id"])
+    receiverId = GetMatchedUserInfo(
+        notification.matchDetails.users, uid)["id"]
+
+    doc_ref = db.collection("users").document(receiverId)
     doc_snapshot = doc_ref.get()
     if doc_snapshot.exists:
         device_token = doc_snapshot.get("deviceToken")
@@ -476,7 +481,7 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
             "type": notification.type,
             "match": {
                 "loggedInProfile": notification.matchDetails.users[uid].dict(),
-                "userSwiped": notification.matchDetails.users[receiver["id"]].dict()
+                "userSwiped": notification.matchDetails.users[receiverId].dict()
             },
             "matchDetails": notification.matchDetails.dict()
         }
@@ -487,11 +492,11 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
             "type": notification.type,
             "message": {
                 "message": notification.message,
-                "sender": notification.matchDetails.users[uid].dict(),
-                "receiverId": receiver["id"]
+                "sender": notification.matchDetails.users[uid].dict()
             },
             "matchDetails": notification.matchDetails.dict()
         }
+
     push_client = PushClient()
     try:
         # Send the notification
@@ -508,6 +513,45 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
         raise HTTPException(
             status_code=400, detail="Failed to send notification: " + str(e)
         )
+
+
+@app.post("/sendManyPushNotifications")
+async def sendPushNotification(notifications: ManyNotificationsObject, uid: str = Depends(verify_auth)):
+    push_client = PushClient()
+    for notification in notifications.notifications:
+        device_token = None
+        notification_dict = notification.dict()
+        receiverId = notification_dict["receiverId"]
+        sender = notification_dict["sender"]
+
+        doc_ref = db.collection("users").document(
+            receiverId)
+        doc_snapshot = doc_ref.get().to_dict()
+        if "deviceToken" in doc_snapshot:
+            device_token = doc_snapshot["deviceToken"]
+        else:
+            print("Receiver device token does not exist")
+        if notifications.type == "delete":
+            title = "Match Deleted"
+            body = "Your swap partner swapped with someone else :("
+            data = {
+                "type": notifications.type,
+                "title": "Match Deleted",
+                "text": f"{sender} swapped with someone else :("
+            }
+        try:
+            # Send notifications
+            if device_token:
+                response = push_client.publish(
+                    PushMessage(to=device_token, data=data,
+                                title=title, body=body)
+                )
+                print(response)
+        except Exception as e:
+            print(
+                f"Failed to send notification for device token {device_token}: " + str(e))
+
+    return JSONResponse(content="Successfully sent all notifications", status_code=200)
 
 
 if __name__ == "__main__":

@@ -47,7 +47,8 @@ matchDoc = {
             'coords': {'latitude': 54.7173, 'longitude': -6.2055},
             'profilePic': None
         }
-    }
+    },
+    "usersMatched": ["pRZu4xbq35Q1vzQBwlPrcGZztqw2", "FlGdc4N4CyMAyKDfNJEHrcGGGRa2"]
 }
 
 

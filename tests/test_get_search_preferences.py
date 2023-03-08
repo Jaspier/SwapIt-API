@@ -11,7 +11,7 @@ searchPreferences = {
     },
     'passes': [],
     'radius': 30,
-    'swipes': []
+    'swipes': ['FlGdc4N4CyMAyKDfNJEHrcGGGRa2']
 }
 
 

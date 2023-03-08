@@ -8,7 +8,7 @@ client = TestClient(app)
 profile = {
     "active": False,
     "coords": {'latitude': 54.6541971, 'longitude': -5.6730648},
-    "deviceToken": "ExponentPushToken[BtpUlRN8i23S_vhK7np6xH]",
+    "deviceToken": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]",
     "displayName": "testuser",
     "id": "QQyOyOf4dLdAN8SD4f2t3JM4g0r1",
     "itemName": "test item",

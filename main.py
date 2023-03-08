@@ -471,11 +471,11 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
     sender_name = notification.matchDetails.users[uid].displayName
 
     doc_ref = db.collection("users").document(receiver_id)
-    doc_snapshot = doc_ref.get()
-    if doc_snapshot.exists:
-        device_token = doc_snapshot.get("deviceToken")
+    doc_snapshot = doc_ref.get().to_dict()
+    if "deviceToken" in doc_snapshot:
+        device_token = doc_snapshot["deviceToken"]
     else:
-        return JSONResponse(content="Receiver does not exist", status_code=400)
+        return JSONResponse(content=f"Receiver {receiver_id} device token does not exist", status_code=400)
     if notification.type == "match":
         title = "New Swap Partner!"
         body = f"{sender_name} wants to swap with you!"
@@ -532,7 +532,7 @@ async def sendPushNotification(notifications: ManyNotificationsObject, uid: str 
         if "deviceToken" in doc_snapshot:
             device_token = doc_snapshot["deviceToken"]
         else:
-            print("Receiver device token does not exist")
+            print(f"Receiver {receiver_id} device token does not exist")
         if notifications.type == "delete":
             title = "Match Deleted"
             body = f"{sender} swapped with someone else :("
@@ -550,9 +550,9 @@ async def sendPushNotification(notifications: ManyNotificationsObject, uid: str 
                 )
         except Exception as e:
             print(
-                f"Failed to send notification for device token {device_token}: " + str(e))
+                f"Failed to send notification for device token {device_token}: {str(e)}")
 
-    return JSONResponse(content="Successfully sent all notifications", status_code=200)
+    return JSONResponse(content="Notifications sent", status_code=200)
 
 
 if __name__ == "__main__":

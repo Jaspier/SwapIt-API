@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from main import app
-from .conftest import mock_login
+from main import app, db
+from firebase_admin import firestore
 
 client = TestClient(app)
 
@@ -48,40 +48,46 @@ notification = {
     "message": "test"
 }
 
-expected_device_token_not_exists = {
+# Only testing unregistered token for now as I don't have access to dummy device
+expected_device_token_error = {
     "status": "error",
-    "message": '"ExponentPushToken[BtpUlRN8i23S_vhK7np6xH]" is not a registered push notification recipient'}
+    "message": '"ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]" is not a registered push notification recipient'}
 
 
-def test_send_push_notification_message_device_token_not_exists(jwt_token):
+def test_send_push_notification_message(jwt_token):
     response = client.post(
         "/sendPushNotification",
         headers={"Authorization": "Bearer " + jwt_token},
         json=notification)
     assert response.status_code == 200
-    assert response.json() == expected_device_token_not_exists
+    assert response.json() == expected_device_token_error
 
 
-def test_send_push_notification_match_device_token_not_exists(jwt_token):
+def test_send_push_notification_match(jwt_token):
     notification["type"] = "match"
     response = client.post(
         "/sendPushNotification",
         headers={"Authorization": "Bearer " + jwt_token},
         json=notification)
     assert response.status_code == 200
-    assert response.json() == expected_device_token_not_exists
+    assert response.json() == expected_device_token_error
 
 
-def test_send_push_notification_receiver_not_exists(jwt_token):
-    notification["matchDetails"]["users"]["QQyOyOf4dLdAN8SD4f2t3JM4g0r1"]["id"] = "NotExists"
-    notification["type"] = "message"
+def test_send_push_notification_receiver_device_token_not_exists(jwt_token):
+    db.collection("users").document("QQyOyOf4dLdAN8SD4f2t3JM4g0r1").update({
+        u'deviceToken': firestore.DELETE_FIELD
+    })
     response = client.post(
         "/sendPushNotification",
         headers={"Authorization": "Bearer " + jwt_token},
         json=notification)
 
     assert response.status_code == 400
-    assert response.json() == "Receiver does not exist"
+    assert response.json() == "Receiver QQyOyOf4dLdAN8SD4f2t3JM4g0r1 device token does not exist"
+
+    db.collection("users").document("QQyOyOf4dLdAN8SD4f2t3JM4g0r1").update({
+        u'deviceToken': "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+    })
 
 
 def test_swipe_right_unsuccessful():

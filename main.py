@@ -469,6 +469,7 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
         notification.matchDetails.users, uid)["id"]
 
     sender_name = notification.matchDetails.users[uid].displayName
+    item_name = notification.matchDetails.users[uid].itemName
 
     doc_ref = db.collection("users").document(receiver_id)
     doc_snapshot = doc_ref.get().to_dict()
@@ -488,8 +489,8 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
             "matchDetails": notification.matchDetails.dict()
         }
     elif notification.type == "message":
-        title = "New Message"
-        body = f"{sender_name} sent you a message!"
+        title = f"{sender_name} ({item_name})"
+        body = notification.message
         data = {
             "type": notification.type,
             "message": {

@@ -4,7 +4,7 @@ from models import UserObject, SwipedUserObject
 
 def FormatFireBaseDoc(doc: object):
     for key, value in doc.items():
-        if key == "timestamp":
+        if key == "timestamp" or key == "lastOnline":
             doc[key] = value.isoformat()
     return doc
 

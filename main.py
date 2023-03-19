@@ -59,6 +59,19 @@ async def log_requests(request: Request, call_next):
     return response
 
 
+@app.post("/login", include_in_schema=False)
+async def login(request: Request):
+    req_json = await request.json()
+    email = req_json['email']
+    password = req_json['password']
+    try:
+        user = pb.auth().sign_in_with_email_and_password(email, password)
+        jwt = user['idToken']
+        return JSONResponse(content={'token': jwt}, status_code=200)
+    except:
+        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
+
+
 @app.get("/checkUserExists")
 async def checkUserExists(uid: str = Depends(verify_auth)):
     try:
@@ -81,6 +94,9 @@ async def myProfile(uid: str = Depends(verify_auth)):
         if doc.exists:
             data = FormatFireBaseDoc(doc.to_dict())
             return JSONResponse(content=data, status_code=200)
+        else:
+            raise HTTPException(
+                status_code=400, detail="Failed to fetch profile: Profile does not exist")
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to fetch profile: " + str(e))
@@ -564,6 +580,33 @@ async def sendPushNotification(notifications: ManyNotificationsObject, uid: str 
     }
     return JSONResponse(content=res, status_code=200)
 
+
+@app.post("/updateUserStatus")
+async def updateUserStatus(request: Request, uid: str = Depends(verify_auth)):
+    try:
+        status = await request.json()
+        user_ref = db.collection('users').document(uid)
+        user = user_ref.get()
+        if user.exists:
+            if status == "offline":
+                user_ref.set({
+                    u"status": status,
+                    u"lastOnline": firestore.SERVER_TIMESTAMP
+                }, merge=True)
+            else:
+                user_ref.set({
+                    u"status": status,
+                }, merge=True)
+        else:
+            raise HTTPException(
+                status_code=400, detail="Failed to update status: user does not exist"
+            )
+        return JSONResponse(content="Successfully updated status", status_code=200)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail="Failed to update status: " + str(e)
+        )
 
 if __name__ == "__main__":
     uvicorn.run("main:app")

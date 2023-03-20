@@ -51,6 +51,7 @@ class UserPrefsObject(BaseModel):
 class MessageObject(BaseModel):
     matchId: str
     message: str
+    type: str
 
 
 class MatchObject(BaseModel):

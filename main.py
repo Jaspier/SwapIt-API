@@ -346,6 +346,7 @@ async def sendMessage(message: MessageObject, uid: str = Depends(verify_auth)):
             u'displayName': user.email if user.display_name is None else user.display_name,
             u'photoUrl': user.photo_url,
             u'message': message.message,
+            u'type': message.type,
             u'timestamp': firestore.SERVER_TIMESTAMP
         })
         return JSONResponse(content="Successfully sent message", status_code=200)

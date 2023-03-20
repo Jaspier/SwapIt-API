@@ -7,6 +7,7 @@ client = TestClient(app)
 message = {
     u'matchId': "pRZu4xbq35Q1vzQBwlPrcGZztqw2FlGdc4N4CyMAyKDfNJEHrcGGGRa2",
     u'message': "Test Message",
+    u'type': "message"
 }
 
 

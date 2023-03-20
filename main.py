@@ -59,19 +59,6 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-@app.post("/login", include_in_schema=False)
-async def login(request: Request):
-    req_json = await request.json()
-    email = req_json['email']
-    password = req_json['password']
-    try:
-        user = pb.auth().sign_in_with_email_and_password(email, password)
-        jwt = user['idToken']
-        return JSONResponse(content={'token': jwt}, status_code=200)
-    except:
-        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
-
-
 @app.get("/checkUserExists")
 async def checkUserExists(uid: str = Depends(verify_auth)):
     try:
@@ -598,9 +585,7 @@ async def updateUserStatus(request: Request, uid: str = Depends(verify_auth)):
                     u"status": status,
                 }, merge=True)
         else:
-            raise HTTPException(
-                status_code=400, detail="Failed to update status: user does not exist"
-            )
+            return JSONResponse(content="Failed to update status: user does not exist", status_code=400)
         return JSONResponse(content="Successfully updated status", status_code=200)
 
     except Exception as e:

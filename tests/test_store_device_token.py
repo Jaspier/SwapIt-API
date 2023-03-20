@@ -5,9 +5,7 @@ from firebase_admin import firestore
 
 client = TestClient(app)
 
-device_token = {
-    "token": "MyDeviceToken"
-}
+device_token = "MyDeviceToken"
 
 
 def test_store_device_token_successful(jwt_token):

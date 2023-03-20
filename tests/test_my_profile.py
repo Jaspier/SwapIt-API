@@ -12,9 +12,11 @@ profile = {
     "displayName": "testuser",
     "id": "QQyOyOf4dLdAN8SD4f2t3JM4g0r1",
     "itemName": "test item",
+    "lastOnline": "2023-03-20T00:36:20.004000+00:00",
     "location": "Testopolis",
     "photoUrls": '[{"uri":"e58470d6-10ce-48da-a681-92a4f32979fc.jpg"}]',
     "radius": 30,
+    "status": "offline",
     "timestamp": "2023-02-09T20:42:52.686000+00:00"
 }
 

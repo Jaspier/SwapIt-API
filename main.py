@@ -6,6 +6,8 @@ import pyrebase
 import json
 from os import path
 import logging
+import uuid
+import base64
 
 from firebase_admin import credentials, auth, firestore
 from fastapi import FastAPI, Request, Header, Depends

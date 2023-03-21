@@ -210,6 +210,19 @@ async def getSearchRadius(uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to fetch search radius: " + str(e))
 
 
+@app.post("/login", include_in_schema=False)
+async def login(request: Request):
+    req_json = await request.json()
+    email = req_json['email']
+    password = req_json['password']
+    try:
+        user = pb.auth().sign_in_with_email_and_password(email, password)
+        jwt = user['idToken']
+        return JSONResponse(content={'token': jwt}, status_code=200)
+    except:
+        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
+
+
 @app.post("/updateUserPreferences")
 async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verify_auth)):
     try:
@@ -229,6 +242,30 @@ async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verif
                 u'radius': prefs.radius,
                 u'timestamp': firestore.SERVER_TIMESTAMP
             })
+
+        if (prefs.photoKey != ""):
+            # Update profile pic key in messages
+            query = db.collection("matches").where(
+                "usersMatched", "array_contains", uid)
+            docs = query.stream()
+
+            matches = []
+            for doc in docs:
+                matches.append(doc.id)
+
+            # Iterate through the matches and get the relevant messages
+            for match_id in matches:
+                # Query the messages subcollection for messages with the provided userId
+                query = db.collection("matches").document(
+                    match_id).collection("messages").where("userId", "==", uid)
+                docs = query.stream()
+
+                # Update the photoUrl field for each relevant message
+                for doc in docs:
+                    message_ref = db.collection("matches").document(
+                        match_id).collection("messages").document(doc.id)
+                    message_ref.update({"photoUrl": prefs.photoKey})
+
         return JSONResponse(content="Successfully updated user preferences", status_code=204)
     except Exception as e:
         raise HTTPException(

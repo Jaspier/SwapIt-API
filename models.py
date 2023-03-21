@@ -46,6 +46,7 @@ class SwipedUserObject(BaseModel):
 class UserPrefsObject(BaseModel):
     displayName: str
     radius: int
+    photoKey: str
 
 
 class MessageObject(BaseModel):

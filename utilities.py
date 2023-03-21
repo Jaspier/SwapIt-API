@@ -44,7 +44,7 @@ def GetMatchedUserInfo(users, user_logged_in):
     return {'id': id, **user}
 
 
-def DeleteFolder(bucket, folder_path):
+def DeleteS3Folder(bucket, folder_path):
     try:
         objects = bucket.objects.filter(Prefix=folder_path)
         for obj in objects:

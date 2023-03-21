@@ -6,8 +6,6 @@ import pyrebase
 import json
 from os import path
 import logging
-import uuid
-import base64
 
 from firebase_admin import credentials, auth, firestore
 from fastapi import FastAPI, Request, Header, Depends
@@ -17,7 +15,7 @@ from fastapi.exceptions import HTTPException
 from exponent_server_sdk import PushClient
 from exponent_server_sdk import PushMessage
 
-from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo, DeleteFolder
+from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo, DeleteS3Folder
 from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, NotificationObject, ManyNotificationsObject, DeleteMatchesObject
 import boto3
 
@@ -68,19 +66,6 @@ async def log_requests(request: Request, call_next):
     logger.debug(response.status_code)
     print(f"INCOMING REQUEST - {request.url} {response.status_code}")
     return response
-
-
-@app.post("/login", include_in_schema=False)
-async def login(request: Request):
-    req_json = await request.json()
-    email = req_json['email']
-    password = req_json['password']
-    try:
-        user = pb.auth().sign_in_with_email_and_password(email, password)
-        jwt = user['idToken']
-        return JSONResponse(content={'token': jwt}, status_code=200)
-    except:
-        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
 
 
 @app.get("/checkUserExists")
@@ -306,7 +291,7 @@ async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
 
         # Delete images from s3 if any
         folder_path = f'public/chats/{match_id}'
-        DeleteFolder(s3_bucket, folder_path)
+        DeleteS3Folder(s3_bucket, folder_path)
 
         return JSONResponse(content="Successfully deleted match", status_code=204)
     except Exception as e:
@@ -343,6 +328,10 @@ async def deleteMatches(payload: DeleteMatchesObject, uid: str = Depends(verify_
 
             # Delete match
             db.collection(u'matches').document(match_id).delete()
+
+            # Delete images from S3
+            DeleteS3Folder(s3_bucket, f'public/chats/{match_id}')
+            DeleteS3Folder(s3_bucket, f'public/profiles/{uid}/items')
 
         users_to_notify = []
         user = auth.get_user(uid)

@@ -245,7 +245,7 @@ async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verif
             })
 
         if (prefs.photoKey != ""):
-            UpdateProfilePicInChatMessages(uid, prefs.photoKey)
+            UpdateProfilePicInChatMessages(db, uid, prefs.photoKey)
 
         return JSONResponse(content="Successfully updated user preferences", status_code=204)
     except Exception as e:

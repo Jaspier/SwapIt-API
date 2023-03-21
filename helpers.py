@@ -1,7 +1,4 @@
-from main import db
-
-
-def UpdateProfilePicInChatMessages(uid: str, key: str):
+def UpdateProfilePicInChatMessages(db, uid: str, key: str):
     # Update profile pic key in messages
     query = db.collection("matches").where(
         "usersMatched", "array_contains", uid)

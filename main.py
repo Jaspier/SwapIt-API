@@ -16,6 +16,7 @@ from exponent_server_sdk import PushClient
 from exponent_server_sdk import PushMessage
 
 from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo, DeleteS3Folder
+from helpers import UpdateProfilePicInChatMessages
 from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, NotificationObject, ManyNotificationsObject, DeleteMatchesObject
 import boto3
 
@@ -244,27 +245,7 @@ async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verif
             })
 
         if (prefs.photoKey != ""):
-            # Update profile pic key in messages
-            query = db.collection("matches").where(
-                "usersMatched", "array_contains", uid)
-            docs = query.stream()
-
-            matches = []
-            for doc in docs:
-                matches.append(doc.id)
-
-            # Iterate through the matches and get the relevant messages
-            for match_id in matches:
-                # Query the messages subcollection for messages with the provided userId
-                query = db.collection("matches").document(
-                    match_id).collection("messages").where("userId", "==", uid)
-                docs = query.stream()
-
-                # Update the photoUrl field for each relevant message
-                for doc in docs:
-                    message_ref = db.collection("matches").document(
-                        match_id).collection("messages").document(doc.id)
-                    message_ref.update({"photoUrl": prefs.photoKey})
+            UpdateProfilePicInChatMessages(uid, prefs.photoKey)
 
         return JSONResponse(content="Successfully updated user preferences", status_code=204)
     except Exception as e:

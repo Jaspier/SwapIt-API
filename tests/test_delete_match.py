@@ -58,7 +58,7 @@ def test_delete_match_successful(jwt_token):
         headers={"Authorization": "Bearer " + jwt_token},
         json=usersMatched)
     assert response.status_code == 204
-    assert response.json() == "Successfully delete match"
+    assert response.json() == "Successfully deleted match"
 
     # add swipe back
     db.collection(u'users').document('pRZu4xbq35Q1vzQBwlPrcGZztqw2').collection(

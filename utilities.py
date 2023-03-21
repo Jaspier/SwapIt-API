@@ -42,3 +42,12 @@ def GetMatchedUserInfo(users, user_logged_in):
     (id, user) = list(new_users.items())[0]
 
     return {'id': id, **user}
+
+
+def DeleteFolder(bucket, folder_path):
+    try:
+        objects = bucket.objects.filter(Prefix=folder_path)
+        for obj in objects:
+            obj.delete()
+    except Exception as e:
+        raise e

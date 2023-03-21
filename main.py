@@ -15,8 +15,17 @@ from fastapi.exceptions import HTTPException
 from exponent_server_sdk import PushClient
 from exponent_server_sdk import PushMessage
 
-from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo
+from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo, DeleteFolder
 from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, NotificationObject, ManyNotificationsObject, DeleteMatchesObject
+import boto3
+
+s3 = boto3.resource('s3',
+                    aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                    aws_secret_access_key=os.environ.get(
+                        'AWS_SECRET_ACCESS_KEY')
+                    )
+bucket_name = os.environ.get('AWS_BUCKET_NAME')
+s3_bucket = s3.Bucket(bucket_name)
 
 LOGGING_CONFIG_FILE = path.join(path.dirname(
     path.abspath(__file__)), 'logging.conf')
@@ -57,6 +66,19 @@ async def log_requests(request: Request, call_next):
     logger.debug(response.status_code)
     print(f"INCOMING REQUEST - {request.url} {response.status_code}")
     return response
+
+
+@app.post("/login", include_in_schema=False)
+async def login(request: Request):
+    req_json = await request.json()
+    email = req_json['email']
+    password = req_json['password']
+    try:
+        user = pb.auth().sign_in_with_email_and_password(email, password)
+        jwt = user['idToken']
+        return JSONResponse(content={'token': jwt}, status_code=200)
+    except:
+        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
 
 
 @app.get("/checkUserExists")
@@ -268,17 +290,23 @@ async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
         db.collection(u'users').document(usersMatched[1]).collection(
             "swipes").document(usersMatched[0]).delete()
 
+        match_id = GenerateId(usersMatched[0], usersMatched[1])
+
         # Delete Messages
         subcollection_ref = db.collection("matches").document(
-            GenerateId(usersMatched[0], usersMatched[1])).collection("messages")
+            match_id).collection("messages")
         docs = subcollection_ref.get()
         for doc in docs:
             doc.reference.delete()
 
         # Delete Match Document
-        db.collection(u'matches').document(GenerateId(
-            usersMatched[0], usersMatched[1])).delete()
-        return JSONResponse(content="Successfully delete match", status_code=204)
+        db.collection(u'matches').document(match_id).delete()
+
+        # Delete images from s3 if any
+        folder_path = f'public/chats/{match_id}'
+        DeleteFolder(s3_bucket, folder_path)
+
+        return JSONResponse(content="Successfully deleted match", status_code=204)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to delete match: " + str(e))

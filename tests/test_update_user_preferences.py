@@ -7,6 +7,7 @@ client = TestClient(app)
 userPrefs = {
     "displayName": "testuser1",
     "radius": 30,
+    "photoKey": ""
 }
 
 

@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app, db
+from main import app, db, version
 from firebase_admin import firestore
 
 from .conftest import mock_login
@@ -12,7 +12,7 @@ status = "online"
 
 def test_update_user_status_successful(jwt_token):
     response = client.post(
-        "/updateUserStatus",
+        f"/{version}/update_user_status",
         headers={"Authorization": "Bearer " + jwt_token},
         json=status)
     assert response.status_code == 200
@@ -22,7 +22,7 @@ def test_update_user_status_successful(jwt_token):
 def test_update_user_status_not_exists():
     token = mock_login("unknown@test.io", "unknown")
     response = client.post(
-        "/updateUserStatus",
+        f"/{version}/update_user_status",
         headers={"Authorization": "Bearer " + token},
         json=status)
     assert response.status_code == 400
@@ -31,7 +31,7 @@ def test_update_user_status_not_exists():
 
 def test_confirm_swap_unsuccessful():
     response = client.post(
-        "/updateUserStatus", headers={"Authorization": "Bearer fail"},
+        f"/{version}/update_user_status", headers={"Authorization": "Bearer fail"},
         json=status)
     assert response.status_code == 400
     # Delete status field if exists after running tests

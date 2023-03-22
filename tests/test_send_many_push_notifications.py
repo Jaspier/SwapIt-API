@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
-from .conftest import mock_login
+from main import app, version
 
 client = TestClient(app)
 
@@ -28,7 +27,7 @@ expected = {
 
 def test_send_many_push_notifications_delete(jwt_token):
     response = client.post(
-        "/sendManyPushNotifications",
+        f"/{version}/send_many_push_notifications",
         headers={"Authorization": "Bearer " + jwt_token},
         json=notification)
     assert response.status_code == 200

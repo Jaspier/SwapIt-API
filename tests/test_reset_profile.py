@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from main import app, db
+from main import app, db, version
 from firebase_admin import firestore
 
 client = TestClient(app)
@@ -7,7 +7,7 @@ client = TestClient(app)
 
 def test_reset_profile_successful(jwt_token):
     response = client.get(
-        "/resetProfile", headers={"Authorization": "Bearer " + jwt_token})
+        f"/{version}/reset_profile", headers={"Authorization": "Bearer " + jwt_token})
     assert response.status_code == 200
     assert response.json() == "Successfully reset profile"
 
@@ -23,5 +23,5 @@ def test_reset_profile_successful(jwt_token):
 
 def test_reset_profile_unsuccessful():
     response = client.get(
-        "/resetProfile", headers={"Authorization": "Bearer fail"})
+        f"/{version}/reset_profile", headers={"Authorization": "Bearer fail"})
     assert response.status_code == 400

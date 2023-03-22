@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, version
 
 client = TestClient(app)
 
@@ -15,7 +15,7 @@ locationData = {
 
 def test_update_location_successful(jwt_token):
     response = client.post(
-        "/updateLocation",
+        f"/{version}/update_location",
         headers={"Authorization": "Bearer " + jwt_token},
         json=locationData)
     assert response.status_code == 200
@@ -24,5 +24,5 @@ def test_update_location_successful(jwt_token):
 
 def test_update_location_unsuccessful():
     response = client.post(
-        "/updateLocation", headers={"Authorization": "Bearer fail"})
+        f"/{version}/update_location", headers={"Authorization": "Bearer fail"})
     assert response.status_code == 400

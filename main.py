@@ -15,8 +15,8 @@ from fastapi.exceptions import HTTPException
 from exponent_server_sdk import PushClient
 from exponent_server_sdk import PushMessage
 
-from utilities import FormatFireBaseDoc, FormatUserObject, GetMatchedUserInfo, DeleteS3Folder
-from helpers import UpdateProfilePicInChatMessages, get_user_preferences, get_logged_in_user, create_match, update_or_set_user_prefs, create_or_update_profile, delete_match, get_all_users_to_notify, check_match_exists, toggle_swap_confirmation, get_notification_type
+from utilities import format_firebase_doc, format_user_object, get_matched_user_info, delete_s3_folder
+from helpers import UpdateProfilePicInChatMessages, get_search_prefs, get_logged_in_user, create_match, update_or_set_user_prefs, create_or_update_profile, delete_single_match, get_all_users_to_notify, check_match_exists, toggle_swap_confirmation, get_notification_type
 from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, NotificationObject, ManyNotificationsObject, DeleteMatchesObject
 import boto3
 
@@ -48,6 +48,7 @@ app.add_middleware(
     allow_methods=allow_all,
     allow_headers=allow_all
 )
+version = "v1"
 
 
 async def verify_auth(authorization: str = Header(None)):
@@ -69,8 +70,8 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-@app.get("/checkUserExists")
-async def checkUserExists(uid: str = Depends(verify_auth)):
+@app.get(f"/{version}/check_user_exists")
+async def check_user_exists(uid: str = Depends(verify_auth)):
     try:
         user_ref = db.collection(u'users').document(uid)
         user = user_ref.get()
@@ -83,13 +84,13 @@ async def checkUserExists(uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to fetch user: " + str(e))
 
 
-@app.get("/myprofile")
-async def myProfile(uid: str = Depends(verify_auth)):
+@app.get(f"/{version}/my_profile")
+async def my_profile(uid: str = Depends(verify_auth)):
     try:
         doc_ref = db.collection(u'users').document(uid)
         doc = doc_ref.get()
         if doc.exists:
-            data = FormatFireBaseDoc(doc.to_dict())
+            data = format_firebase_doc(doc.to_dict())
             return JSONResponse(content=data, status_code=200)
         else:
             raise HTTPException(
@@ -99,18 +100,18 @@ async def myProfile(uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to fetch profile: " + str(e))
 
 
-@app.get("/getSearchPreferences")
-async def getSearchPref(uid: str = Depends(verify_auth)):
+@app.get(f"/{version}/get_search_preferences")
+async def get_search_preferences(uid: str = Depends(verify_auth)):
     try:
-        preferences = get_user_preferences(db, uid)
+        preferences = get_search_prefs(db, uid)
         return JSONResponse(content=preferences, status_code=200)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to fetch search preferences: " + str(e))
 
 
-@app.post("/updateLocation")
-async def updateLocation(location: Location, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/update_location")
+async def update_location(location: Location, uid: str = Depends(verify_auth)):
     try:
         location_ref = db.collection(u'users').document(uid)
         updated_data = {
@@ -124,10 +125,10 @@ async def updateLocation(location: Location, uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to update location: " + str(e))
 
 
-@app.post("/swipeLeft")
-async def swipeLeft(userSwiped: UserObject, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/swipe_left")
+async def swipe_left(userSwiped: UserObject, uid: str = Depends(verify_auth)):
     try:
-        user_passed_dict = FormatUserObject(userSwiped)
+        user_passed_dict = format_user_object(userSwiped)
         db.collection(u'users').document(uid).collection(
             u'passes').document(userSwiped.id).set(user_passed_dict)
         return JSONResponse(content="Successfully added Pass", status_code=200)
@@ -136,11 +137,11 @@ async def swipeLeft(userSwiped: UserObject, uid: str = Depends(verify_auth)):
             status_code=400, detail="Unable to pass user: " + str(e))
 
 
-@app.post("/swipeRight")
-async def swipeRight(userSwiped: SwipedUserObject, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/swipe_right")
+async def swipe_right(userSwiped: SwipedUserObject, uid: str = Depends(verify_auth)):
     try:
         logged_in_user = get_logged_in_user(db, uid)
-        user_swiped = FormatUserObject(userSwiped)
+        user_swiped = format_user_object(userSwiped)
 
         # Check if user has already been swiped
         swipe_ref = db.collection(u'users').document(
@@ -160,13 +161,13 @@ async def swipeRight(userSwiped: SwipedUserObject, uid: str = Depends(verify_aut
             status_code=400, detail="Unable to swipe user: " + str(e))
 
 
-@app.get("/getSearchRadius")
-async def getSearchRadius(uid: str = Depends(verify_auth)):
+@app.get(f"/{version}/get_search_radius")
+async def get_search_radius(uid: str = Depends(verify_auth)):
     try:
         doc_ref = db.collection(u'users').document(uid)
         doc = doc_ref.get()
         if doc.exists:
-            data = FormatFireBaseDoc(doc.to_dict())
+            data = format_firebase_doc(doc.to_dict())
             radius = data["radius"]
             return JSONResponse(content=radius, status_code=200)
     except Exception as e:
@@ -174,8 +175,8 @@ async def getSearchRadius(uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to fetch search radius: " + str(e))
 
 
-@app.post("/updateUserPreferences")
-async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/update_user_preferences")
+async def update_user_preferences(prefs: UserPrefsObject, uid: str = Depends(verify_auth)):
     try:
         update_or_set_user_prefs(db, uid, prefs)
         if (prefs.photoKey != ""):
@@ -187,8 +188,8 @@ async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verif
             status_code=400, detail="Failed to update user preferences: " + str(e))
 
 
-@app.post("/createProfile")
-async def createProfile(profile: UserObject, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/create_profile")
+async def create_profile(profile: UserObject, uid: str = Depends(verify_auth)):
     try:
         res = create_or_update_profile(db, profile, uid)
         return JSONResponse(content=res, status_code=200)
@@ -197,18 +198,18 @@ async def createProfile(profile: UserObject, uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to create/update profile: " + str(e))
 
 
-@app.post("/deleteMatch")
-async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/delete_match")
+async def delete_match(usersMatched: List[str], uid: str = Depends(verify_auth)):
     try:
-        delete_match(db, s3_bucket, usersMatched)
+        delete_single_match(db, s3_bucket, usersMatched)
         return JSONResponse(content="Successfully deleted match", status_code=200)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to delete match: " + str(e))
 
 
-@app.post("/deleteMatches")
-async def deleteMatches(payload: DeleteMatchesObject, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/delete_matches")
+async def delete_matches(payload: DeleteMatchesObject, uid: str = Depends(verify_auth)):
     try:
         collection_ref = db.collection(u'matches')
         query = collection_ref.where(
@@ -218,12 +219,12 @@ async def deleteMatches(payload: DeleteMatchesObject, uid: str = Depends(verify_
         all_users_matched = []
         for match in matches:
             users_matched = match["usersMatched"]
-            delete_match(db, s3_bucket, users_matched)
+            delete_single_match(db, s3_bucket, users_matched)
 
             all_users_matched.extend(users_matched)
 
             # Delete item images from S3
-            DeleteS3Folder(s3_bucket, f'public/profiles/{uid}/items')
+            delete_s3_folder(s3_bucket, f'public/profiles/{uid}/items')
 
         notifications_object = get_all_users_to_notify(
             uid, all_users_matched, payload)
@@ -236,8 +237,8 @@ async def deleteMatches(payload: DeleteMatchesObject, uid: str = Depends(verify_
         )
 
 
-@app.post("/sendMessage")
-async def sendMessage(message: MessageObject, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/send_message")
+async def send_message(message: MessageObject, uid: str = Depends(verify_auth)):
     try:
         user = auth.get_user(uid)
         db.collection(u'matches').document(message.matchId).collection(u'messages').add({
@@ -254,8 +255,8 @@ async def sendMessage(message: MessageObject, uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to send message: " + str(e))
 
 
-@app.post("/confirmSwap")
-async def confirmSwap(usersMatched: List[str], uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/confirm_swap")
+async def confirm_swap(usersMatched: List[str], uid: str = Depends(verify_auth)):
     try:
         matched_user, match_dict, match_ref = check_match_exists(
             db, uid, usersMatched)
@@ -271,8 +272,8 @@ async def confirmSwap(usersMatched: List[str], uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to confirm swap: " + str(e))
 
 
-@app.post("/cancelSwap")
-async def confirmSwap(usersMatched: List[str], uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/cancel_swap")
+async def cancel_swap(usersMatched: List[str], uid: str = Depends(verify_auth)):
     try:
         matched_user, match_dict, match_ref = check_match_exists(
             db, uid, usersMatched)
@@ -288,8 +289,8 @@ async def confirmSwap(usersMatched: List[str], uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to cancel swap: " + str(e))
 
 
-@app.get("/resetProfile")
-async def resetProfile(uid: str = Depends(verify_auth)):
+@app.get(f"/{version}/reset_profile")
+async def reset_profile(uid: str = Depends(verify_auth)):
     try:
         db.collection("users").document(uid).update({
             "itemName": None,
@@ -305,8 +306,8 @@ async def resetProfile(uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to reset profile: " + str(e))
 
 
-@app.post("/storeDeviceToken")
-async def storeDeviceToken(request: Request, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/store_device_token")
+async def store_device_token(request: Request, uid: str = Depends(verify_auth)):
     try:
         token = await request.json()
         doc_ref = db.collection('users').document(uid)
@@ -331,10 +332,10 @@ async def storeDeviceToken(request: Request, uid: str = Depends(verify_auth)):
         )
 
 
-@app.post("/sendPushNotification")
-async def sendPushNotification(notification: NotificationObject, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/send_push_notification")
+async def send_push_notification(notification: NotificationObject, uid: str = Depends(verify_auth)):
 
-    receiver_id = GetMatchedUserInfo(
+    receiver_id = get_matched_user_info(
         notification.matchDetails.users, uid)["id"]
 
     doc_ref = db.collection("users").document(receiver_id)
@@ -362,8 +363,8 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
         )
 
 
-@app.post("/sendManyPushNotifications")
-async def sendPushNotification(notifications: ManyNotificationsObject, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/send_many_push_notifications")
+async def send_many_push_notifications(notifications: ManyNotificationsObject, uid: str = Depends(verify_auth)):
     push_client = PushClient()
     notified = []
     not_notified = []
@@ -409,8 +410,8 @@ async def sendPushNotification(notifications: ManyNotificationsObject, uid: str 
     return JSONResponse(content=res, status_code=200)
 
 
-@app.post("/updateUserStatus")
-async def updateUserStatus(request: Request, uid: str = Depends(verify_auth)):
+@app.post(f"/{version}/update_user_status")
+async def update_user_status(request: Request, uid: str = Depends(verify_auth)):
     try:
         status = await request.json()
         user_ref = db.collection('users').document(uid)

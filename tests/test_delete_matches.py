@@ -1,6 +1,5 @@
 from fastapi.testclient import TestClient
-import pytest
-from main import app, db
+from main import app, db, version
 
 client = TestClient(app)
 
@@ -111,7 +110,7 @@ expected = {
 
 def test_delete_matches_successful(jwt_token):
     response = client.post(
-        "/deleteMatches",
+        f"/{version}/delete_matches",
         headers={"Authorization": "Bearer " + jwt_token},
         json=payload)
     assert response.status_code == 200
@@ -136,6 +135,6 @@ def test_delete_matches_unsuccessful():
     db.collection(u'matches').document(
         "QQyOyOf4dLdAN8SD4f2t3JM4g0r1FlGdc4N4CyMAyKDfNJEHrcGGGRa2").set(match_to_be_deleted)
     response = client.post(
-        "/deleteMatches", headers={"Authorization": "Bearer fail"},
+        f"/{version}/delete_matches", headers={"Authorization": "Bearer fail"},
         json=payload)
     assert response.status_code == 400

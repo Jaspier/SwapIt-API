@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, version
 from .conftest import mock_login
 
 client = TestClient(app)
@@ -24,12 +24,12 @@ profile = {
 def test_my_profile_successful():
     token = mock_login("testuser@test.io", "test123")
     response = client.get(
-        "/myprofile", headers={"Authorization": "Bearer " + token})
+        f"/{version}/my_profile", headers={"Authorization": "Bearer " + token})
     assert response.status_code == 200
     assert response.json() == profile
 
 
 def test_my_profile_unsuccessful():
     response = client.get(
-        "/myprofile", headers={"Authorization": "Bearer fail"})
+        f"/{version}/my_profile", headers={"Authorization": "Bearer fail"})
     assert response.status_code == 400

@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, version
 
 client = TestClient(app)
 
@@ -25,7 +25,7 @@ res = {
 
 def test_update_existing_profile(jwt_token):
     response = client.post(
-        "/createProfile",
+        f"/{version}/create_profile",
         headers={"Authorization": "Bearer " + jwt_token},
         json=profile)
     assert response.status_code == 200
@@ -37,7 +37,7 @@ def test_create_new_profile(jwt_token):
     res[u'isNewUser'] = True
     res[u'message'] = "Successfully created profile"
     response = client.post(
-        "/createProfile",
+        f"/{version}/create_profile",
         headers={"Authorization": "Bearer " + jwt_token},
         json=profile)
     assert response.status_code == 200
@@ -46,5 +46,5 @@ def test_create_new_profile(jwt_token):
 
 def test_create_profile_unsuccessful():
     response = client.post(
-        "/createProfile", headers={"Authorization": "Bearer fail"})
+        f"/{version}/create_profile", headers={"Authorization": "Bearer fail"})
     assert response.status_code == 400

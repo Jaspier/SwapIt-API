@@ -2,14 +2,14 @@ import datetime
 from models import UserObject, SwipedUserObject
 
 
-def FormatFireBaseDoc(doc: object):
+def format_firebase_doc(doc: object):
     for key, value in doc.items():
         if key == "timestamp" or key == "lastOnline":
             doc[key] = value.isoformat()
     return doc
 
 
-def FormatUserObject(userSwiped: UserObject):
+def format_user_object(userSwiped: UserObject):
     user_swiped_dict = userSwiped.dict()
     # user_swiped_dict["coords"] = userSwiped.coords.copy()
     if (user_swiped_dict["timestamp"] != None):
@@ -23,14 +23,14 @@ def FormatUserObject(userSwiped: UserObject):
     return user_swiped_dict
 
 
-def GenerateId(id1: str, id2: str):
+def generate_id(id1: str, id2: str):
     if id1 > id2:
         return id1 + id2
     else:
         return id2 + id1
 
 
-def GetMatchedUserInfo(users, user_logged_in):
+def get_matched_user_info(users, user_logged_in):
     new_users = {}
     for key, value in users.items():
         if isinstance(value, SwipedUserObject):
@@ -44,7 +44,7 @@ def GetMatchedUserInfo(users, user_logged_in):
     return {'id': id, **user}
 
 
-def DeleteS3Folder(bucket, folder_path):
+def delete_s3_folder(bucket, folder_path):
     try:
         objects = bucket.objects.filter(Prefix=folder_path)
         for obj in objects:

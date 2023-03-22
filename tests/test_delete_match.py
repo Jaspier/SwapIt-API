@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app, db
+from main import app, db, version
 
 client = TestClient(app)
 
@@ -54,7 +54,7 @@ matchDoc = {
 
 def test_delete_match_successful(jwt_token):
     response = client.post(
-        "/deleteMatch",
+        f"/{version}/delete_match",
         headers={"Authorization": "Bearer " + jwt_token},
         json=usersMatched)
     assert response.status_code == 200
@@ -71,6 +71,6 @@ def test_delete_match_successful(jwt_token):
 
 def test_delete_match_unsuccessful():
     response = client.post(
-        "/deleteMatch", headers={"Authorization": "Bearer fail"},
+        f"/{version}/delete_match", headers={"Authorization": "Bearer fail"},
         json=usersMatched)
     assert response.status_code == 400

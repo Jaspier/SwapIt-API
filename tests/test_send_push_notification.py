@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app, db
+from main import app, db, version
 from firebase_admin import firestore
 
 client = TestClient(app)
@@ -56,7 +56,7 @@ expected_device_token_error = {
 
 def test_send_push_notification_message(jwt_token):
     response = client.post(
-        "/sendPushNotification",
+        f"/{version}/send_push_notification",
         headers={"Authorization": "Bearer " + jwt_token},
         json=notification)
     assert response.status_code == 200
@@ -66,7 +66,7 @@ def test_send_push_notification_message(jwt_token):
 def test_send_push_notification_match(jwt_token):
     notification["type"] = "match"
     response = client.post(
-        "/sendPushNotification",
+        f"/{version}/send_push_notification",
         headers={"Authorization": "Bearer " + jwt_token},
         json=notification)
     assert response.status_code == 200
@@ -78,7 +78,7 @@ def test_send_push_notification_receiver_device_token_not_exists(jwt_token):
         u'deviceToken': firestore.DELETE_FIELD
     })
     response = client.post(
-        "/sendPushNotification",
+        f"/{version}/send_push_notification",
         headers={"Authorization": "Bearer " + jwt_token},
         json=notification)
 
@@ -92,6 +92,6 @@ def test_send_push_notification_receiver_device_token_not_exists(jwt_token):
 
 def test_send_push_notification_unsuccessful():
     response = client.post(
-        "/sendPushNotification",
+        f"/{version}/send_push_notification",
         headers={"Authorization": "Bearer fail"})
     assert response.status_code == 400

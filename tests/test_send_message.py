@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, version
 
 client = TestClient(app)
 
@@ -13,7 +13,7 @@ message = {
 
 def test_send_message_successful(jwt_token):
     response = client.post(
-        "/sendMessage",
+        f"/{version}/send_message",
         headers={"Authorization": "Bearer " + jwt_token},
         json=message)
     assert response.status_code == 200
@@ -22,5 +22,5 @@ def test_send_message_successful(jwt_token):
 
 def test_send_message_unsuccessful():
     response = client.post(
-        "/sendMessage", headers={"Authorization": "Bearer fail"})
+        f"/{version}/send_message", headers={"Authorization": "Bearer fail"})
     assert response.status_code == 400

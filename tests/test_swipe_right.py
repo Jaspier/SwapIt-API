@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
-from .conftest import mock_login
+from main import app, version
 
 client = TestClient(app)
 
@@ -50,7 +49,7 @@ matched_user = {
 
 def test_swipe_right(jwt_token):
     response = client.post(
-        "/swipeRight",
+        f"/{version}/swipe_right",
         headers={"Authorization": "Bearer " + jwt_token},
         json=user_swiped)
     assert response.status_code == 200
@@ -59,7 +58,7 @@ def test_swipe_right(jwt_token):
 
 def test_swipe_right_match(jwt_token):
     response = client.post(
-        "/swipeRight",
+        f"/{version}/swipe_right",
         headers={"Authorization": "Bearer " + jwt_token},
         json=user_matched)
 
@@ -73,6 +72,6 @@ def test_swipe_right_match(jwt_token):
 
 def test_swipe_right_unsuccessful():
     response = client.post(
-        "/swipeRight",
+        f"/{version}/swipe_right",
         headers={"Authorization": "Bearer fail"})
     assert response.status_code == 400

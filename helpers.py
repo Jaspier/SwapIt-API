@@ -1,10 +1,10 @@
 from typing import List
 from firebase_admin import auth, firestore
 from models import DeleteMatchesObject, NotificationObject, UserObject, UserPrefsObject
-from utilities import DeleteS3Folder, FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo
+from utilities import delete_s3_folder, format_firebase_doc, format_user_object, generate_id, get_matched_user_info
 
 
-def get_user_preferences(db, uid: str):
+def get_search_prefs(db, uid: str):
     preferences = {}
 
     # Retrieve user's coordinates and search radius
@@ -27,7 +27,7 @@ def get_logged_in_user(db, uid: str):
     logged_in_user_dict = None
     user_ref = db.collection(u'users').document(uid)
     user = user_ref.get()
-    logged_in_user_dict = FormatFireBaseDoc(user.to_dict())
+    logged_in_user_dict = format_firebase_doc(user.to_dict())
 
     return logged_in_user_dict
 
@@ -38,7 +38,7 @@ def create_match(db, uid: str, user_swiped, logged_in_user):
         u'swipes').document(user_swiped["id"]).set(user_swiped)
 
     # Create MATCH
-    db.collection(u'matches').document(GenerateId(uid, user_swiped["id"])).set(
+    db.collection(u'matches').document(generate_id(uid, user_swiped["id"])).set(
         {
             u'users': {
                 uid: logged_in_user,
@@ -98,7 +98,7 @@ def create_or_update_profile(db, profile: UserObject, uid: str):
         u'message': "Successfully updated profile",
         u'isNewUser': False,
     }
-    profile_dict = FormatUserObject(profile)
+    profile_dict = format_user_object(profile)
     isNewUser = profile_dict['isNewUser']
     profile_dict["timestamp"] = firestore.SERVER_TIMESTAMP
     del profile_dict["isNewUser"]
@@ -111,7 +111,7 @@ def create_or_update_profile(db, profile: UserObject, uid: str):
         doc_ref = db.collection(u'users').document(uid)
         doc = doc_ref.get()
         if doc.exists:
-            data = FormatFireBaseDoc(doc.to_dict())
+            data = format_firebase_doc(doc.to_dict())
             radius = data["radius"]
             profile_dict["radius"] = radius
             coords = data["coords"]
@@ -121,7 +121,7 @@ def create_or_update_profile(db, profile: UserObject, uid: str):
     return res
 
 
-def delete_match(db, s3_bucket, usersMatched: List[str]):
+def delete_single_match(db, s3_bucket, usersMatched: List[str]):
     # Delete Swipe for user 1
     db.collection(u'users').document(usersMatched[0]).collection(
         "swipes").document(usersMatched[1]).delete()
@@ -129,7 +129,7 @@ def delete_match(db, s3_bucket, usersMatched: List[str]):
     db.collection(u'users').document(usersMatched[1]).collection(
         "swipes").document(usersMatched[0]).delete()
 
-    match_id = GenerateId(usersMatched[0], usersMatched[1])
+    match_id = generate_id(usersMatched[0], usersMatched[1])
 
     # Delete Chat Messages
     subcollection_ref = db.collection("matches").document(
@@ -143,7 +143,7 @@ def delete_match(db, s3_bucket, usersMatched: List[str]):
 
     # Delete photos sent in chat messages if any
     folder_path = f'public/chats/{match_id}'
-    DeleteS3Folder(s3_bucket, folder_path)
+    delete_s3_folder(s3_bucket, folder_path)
 
 
 def get_all_users_to_notify(uid: str, all_users_matched: List[str], payload: DeleteMatchesObject):
@@ -170,11 +170,11 @@ def check_match_exists(db, uid: str, usersMatched: List[str]):
     match_dict = None
 
     match_ref = db.collection(u'matches').document(
-        GenerateId(usersMatched[0], usersMatched[1]))
+        generate_id(usersMatched[0], usersMatched[1]))
     match = match_ref.get()
     if match.exists:
         match_dict = match.to_dict()
-        matchedUser = GetMatchedUserInfo(match_dict["users"], uid)
+        matchedUser = get_matched_user_info(match_dict["users"], uid)
 
     return matchedUser, match_dict, match_ref
 
@@ -198,7 +198,7 @@ def toggle_swap_confirmation(match_ref, matched_user, match_dict, confirm: bool,
 
 
 def get_notification_type(notification: NotificationObject, uid: str):
-    receiver_id = GetMatchedUserInfo(
+    receiver_id = get_matched_user_info(
         notification.matchDetails.users, uid)["id"]
     sender_name = notification.matchDetails.users[uid].displayName
     item_name = notification.matchDetails.users[uid].itemName

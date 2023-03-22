@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, version
 
 client = TestClient(app)
 
@@ -13,7 +13,7 @@ userPrefs = {
 
 def test_update_user_preferences_successful(jwt_token):
     response = client.post(
-        "/updateUserPreferences",
+        f"/{version}/update_user_preferences",
         headers={"Authorization": "Bearer " + jwt_token},
         json=userPrefs)
     assert response.status_code == 200
@@ -22,5 +22,5 @@ def test_update_user_preferences_successful(jwt_token):
 
 def test_update_user_preferences_unsuccessful():
     response = client.post(
-        "/updateUserPreferences", headers={"Authorization": "Bearer fail"})
+        f"/{version}/update_user_preferences", headers={"Authorization": "Bearer fail"})
     assert response.status_code == 400

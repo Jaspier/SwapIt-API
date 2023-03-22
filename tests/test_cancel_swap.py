@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, version
 
 client = TestClient(app)
 
@@ -11,7 +11,7 @@ usersMatched_not_exists = [
 
 def test_cancel_swap_successful(jwt_token):
     response = client.post(
-        "/cancelSwap",
+        f"/{version}/cancel_swap",
         headers={"Authorization": "Bearer " + jwt_token},
         json=usersMatched)
     assert response.status_code == 200
@@ -20,7 +20,7 @@ def test_cancel_swap_successful(jwt_token):
 
 def test_cancel_swap_match_not_exists(jwt_token):
     response = client.post(
-        "/cancelSwap",
+        f"/{version}/cancel_swap",
         headers={"Authorization": "Bearer " + jwt_token},
         json=usersMatched_not_exists)
     assert response.status_code == 404
@@ -29,6 +29,6 @@ def test_cancel_swap_match_not_exists(jwt_token):
 
 def test_cancel_swap_unsuccessful():
     response = client.post(
-        "/cancelSwap", headers={"Authorization": "Bearer fail"},
+        f"/{version}/cancel_swap", headers={"Authorization": "Bearer fail"},
         json=usersMatched)
     assert response.status_code == 400

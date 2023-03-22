@@ -16,7 +16,7 @@ from exponent_server_sdk import PushClient
 from exponent_server_sdk import PushMessage
 
 from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo, DeleteS3Folder
-from helpers import UpdateProfilePicInChatMessages
+from helpers import UpdateProfilePicInChatMessages, get_user_preferences, get_logged_in_user, create_match, update_or_set_user_prefs, create_or_update_profile, delete_match, get_all_users_to_notify
 from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, NotificationObject, ManyNotificationsObject, DeleteMatchesObject
 import boto3
 
@@ -101,22 +101,8 @@ async def myProfile(uid: str = Depends(verify_auth)):
 
 @app.get("/getSearchPreferences")
 async def getSearchPref(uid: str = Depends(verify_auth)):
-    preferences = {}
     try:
-        doc_ref = db.collection(u'users').document(uid)
-        doc = doc_ref.get()
-        if doc.exists:
-            data = doc.to_dict()
-            preferences["coords"] = data['coords']
-            preferences["radius"] = data['radius']
-
-        passes = [doc.id for doc in db.collection(
-            u'users').document(uid).collection(u'passes').stream()]
-        swipes = [doc.id for doc in db.collection(
-            u'users').document(uid).collection(u'swipes').stream()]
-        preferences["passes"] = passes
-        preferences["swipes"] = swipes
-
+        preferences = get_user_preferences(db, uid)
         return JSONResponse(content=preferences, status_code=200)
     except Exception as e:
         raise HTTPException(
@@ -153,43 +139,20 @@ async def swipeLeft(userSwiped: UserObject, uid: str = Depends(verify_auth)):
 @app.post("/swipeRight")
 async def swipeRight(userSwiped: SwipedUserObject, uid: str = Depends(verify_auth)):
     try:
-        logged_in_user_dict = None
-        loggedInUser_ref = db.collection(u'users').document(uid)
-        doc = loggedInUser_ref.get()
-        if doc.exists:
-            logged_in_user_dict = FormatFireBaseDoc(doc.to_dict())
-        else:
-            return JSONResponse(content="User does not exist", status_code=404)
+        logged_in_user = get_logged_in_user(db, uid)
+        user_swiped = FormatUserObject(userSwiped)
 
-        # Check if user swiped on 'you' (TODO: Migrate to cloud function)
+        # Check if user has already been swiped
         swipe_ref = db.collection(u'users').document(
             userSwiped.id).collection(u'swipes').document(uid)
         doc = swipe_ref.get()
-        user_swiped_dict = FormatUserObject(userSwiped)
         if doc.exists:
-            db.collection(u'users').document(uid).collection(
-                u'swipes').document(userSwiped.id).set(user_swiped_dict)
-
-            # Create MATCH
-            logged_in_user = auth.get_user(uid)
-            user_swiped = auth.get_user(userSwiped.id)
-            logged_in_user_dict["profilePic"] = logged_in_user.photo_url
-            user_swiped_dict["profilePic"] = user_swiped.photo_url
-            db.collection(u'matches').document(GenerateId(uid, userSwiped.id)).set(
-                {
-                    u'users': {
-                        uid: logged_in_user_dict,
-                        userSwiped.id: user_swiped_dict
-                    },
-                    u'usersMatched': [uid, userSwiped.id],
-                    u'timestamp': firestore.SERVER_TIMESTAMP
-                }
-            )
-            return JSONResponse(content=logged_in_user_dict, status_code=201)
+            create_match(db, uid, user_swiped, logged_in_user)
+            return JSONResponse(content=logged_in_user, status_code=201)
         else:
-            # // User has swiped as first interaction with another user or no match :(
+            # User has swiped as first interaction with another user or no match :(
             db.collection(u'users').document(uid).collection(
-                u'swipes').document(userSwiped.id).set(user_swiped_dict)
+                u'swipes').document(userSwiped.id).set(user_swiped)
             return JSONResponse(content="Successfully added Swipe", status_code=200)
 
     except Exception as e:
@@ -211,39 +174,10 @@ async def getSearchRadius(uid: str = Depends(verify_auth)):
             status_code=400, detail="Failed to fetch search radius: " + str(e))
 
 
-@app.post("/login", include_in_schema=False)
-async def login(request: Request):
-    req_json = await request.json()
-    email = req_json['email']
-    password = req_json['password']
-    try:
-        user = pb.auth().sign_in_with_email_and_password(email, password)
-        jwt = user['idToken']
-        return JSONResponse(content={'token': jwt}, status_code=200)
-    except:
-        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
-
-
 @app.post("/updateUserPreferences")
 async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verify_auth)):
     try:
-        user_ref = db.collection(u'users').document(uid)
-        user = user_ref.get()
-        if user.exists:
-            prefs_ref = db.collection(u'users').document(uid)
-            prefs_ref.update({
-                u'displayName': prefs.displayName,
-                u'radius': prefs.radius,
-                u'timestamp': firestore.SERVER_TIMESTAMP
-            })
-        else:
-            db.collection(u'users').document(uid).set({
-                u'id': uid,
-                u'displayName': prefs.displayName,
-                u'radius': prefs.radius,
-                u'timestamp': firestore.SERVER_TIMESTAMP
-            })
-
+        update_or_set_user_prefs(db, uid, prefs)
         if (prefs.photoKey != ""):
             UpdateProfilePicInChatMessages(db, uid, prefs.photoKey)
 
@@ -256,30 +190,8 @@ async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verif
 @app.post("/createProfile")
 async def createProfile(profile: UserObject, uid: str = Depends(verify_auth)):
     try:
-        res = {
-            u'message': "Successfully created/updated profile",
-            u'isNewUser': False,
-        }
-        profile_dict = FormatUserObject(profile)
-        profile_dict["timestamp"] = firestore.SERVER_TIMESTAMP
-        if (profile_dict["isNewUser"]):
-            del profile_dict["isNewUser"]
-            db.collection(u'users').document(uid).set(profile_dict)
-            res["isNewUser"] = True
-            return JSONResponse(content=res, status_code=204)
-        else:
-            doc_ref = db.collection(u'users').document(uid)
-            doc = doc_ref.get()
-            if doc.exists:
-                data = FormatFireBaseDoc(doc.to_dict())
-                radius = data["radius"]
-                profile_dict["radius"] = radius
-                coords = data["coords"]
-                profile_dict["coords"] = coords
-
-            del profile_dict["isNewUser"]
-            db.collection(u'users').document(uid).update(profile_dict)
-            return JSONResponse(content=res, status_code=204)
+        res = create_or_update_profile(db, profile, uid)
+        return JSONResponse(content=res, status_code=204)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to create/update profile: " + str(e))
@@ -288,29 +200,7 @@ async def createProfile(profile: UserObject, uid: str = Depends(verify_auth)):
 @app.post("/deleteMatch")
 async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
     try:
-        # Delete Swipe for user 1
-        db.collection(u'users').document(usersMatched[0]).collection(
-            "swipes").document(usersMatched[1]).delete()
-        # Delete Swipe for user 2
-        db.collection(u'users').document(usersMatched[1]).collection(
-            "swipes").document(usersMatched[0]).delete()
-
-        match_id = GenerateId(usersMatched[0], usersMatched[1])
-
-        # Delete Messages
-        subcollection_ref = db.collection("matches").document(
-            match_id).collection("messages")
-        docs = subcollection_ref.get()
-        for doc in docs:
-            doc.reference.delete()
-
-        # Delete Match Document
-        db.collection(u'matches').document(match_id).delete()
-
-        # Delete images from s3 if any
-        folder_path = f'public/chats/{match_id}'
-        DeleteS3Folder(s3_bucket, folder_path)
-
+        delete_match(db, s3_bucket, usersMatched)
         return JSONResponse(content="Successfully deleted match", status_code=204)
     except Exception as e:
         raise HTTPException(
@@ -323,48 +213,20 @@ async def deleteMatches(payload: DeleteMatchesObject, uid: str = Depends(verify_
         collection_ref = db.collection(u'matches')
         query = collection_ref.where(
             u'users.' + uid + '.itemName', u'==', payload.itemName)
-        docs = [doc.to_dict() for doc in query.stream()]
+        matches = [doc.to_dict() for doc in query.stream()]
 
         all_users_matched = []
-        for doc in docs:
-            users_matched = doc["usersMatched"]
-            match_id = GenerateId(users_matched[0], users_matched[1])
-            # Delete swipes
-            db.collection(u'users').document(users_matched[0]).collection(
-                "swipes").document(users_matched[1]).delete()
-            db.collection(u'users').document(users_matched[1]).collection(
-                "swipes").document(users_matched[0]).delete()
-
-            # Delete messages
-            subcollection_ref = db.collection("matches").document(
-                match_id).collection("messages")
-            docs = subcollection_ref.get()
-            for doc in docs:
-                doc.reference.delete()
+        for match in matches:
+            users_matched = match["usersMatched"]
+            delete_match(db, s3_bucket, users_matched)
 
             all_users_matched.extend(users_matched)
 
-            # Delete match
-            db.collection(u'matches').document(match_id).delete()
-
-            # Delete images from S3
-            DeleteS3Folder(s3_bucket, f'public/chats/{match_id}')
+            # Delete item images from S3
             DeleteS3Folder(s3_bucket, f'public/profiles/{uid}/items')
 
-        users_to_notify = []
-        user = auth.get_user(uid)
-        for userId in all_users_matched:
-            if userId != uid and userId != payload.matchedUserId:
-                notification_object = {
-                    "sender": user.display_name,
-                    "receiverId": userId
-                }
-                users_to_notify.append(notification_object)
-
-        notifications_object = {
-            "type": "delete",
-            "notifications": users_to_notify
-        }
+        notifications_object = get_all_users_to_notify(
+            uid, all_users_matched, payload)
 
         return JSONResponse(content=notifications_object, status_code=200)
 

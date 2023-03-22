@@ -18,7 +18,7 @@ profile = {
 }
 
 res = {
-    u'message': "Successfully created/updated profile",
+    u'message': "Successfully updated profile",
     u'isNewUser': False,
 }
 
@@ -35,6 +35,7 @@ def test_update_existing_profile(jwt_token):
 def test_create_new_profile(jwt_token):
     profile["isNewUser"] = True
     res[u'isNewUser'] = True
+    res[u'message'] = "Successfully created profile"
     response = client.post(
         "/createProfile",
         headers={"Authorization": "Bearer " + jwt_token},

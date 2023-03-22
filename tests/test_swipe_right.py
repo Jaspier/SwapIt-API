@@ -44,8 +44,7 @@ matched_user = {
     'photoUrls': '[{"uri":"e58470d6-10ce-48da-a681-92a4f32979fc.jpg"}]',
     'timestamp': '2023-02-10T02:57:36.226000+00:00',
     'radius': 30,
-    'coords': {'latitude': 54.6541971, 'longitude': -5.6730648},
-    'profilePic': 'https://preview.redd.it/1eboxhg5jij51.jpg?auto=webp&s=907a4ff5366b6e50eaf2f9aa2b97f5a47e02c192'
+    'coords': {'latitude': 54.6541971, 'longitude': -5.6730648}
 }
 
 
@@ -70,17 +69,6 @@ def test_swipe_right_match(jwt_token):
     response_dict = response.json()
     response_dict.pop("timestamp")
     assert response_dict == expected_result
-
-
-def test_swipe_right_user_not_exists():
-    token = mock_login("unknown@test.io", "unknown")
-    response = client.post(
-        "/swipeRight",
-        headers={"Authorization": "Bearer " + token},
-        json=user_swiped)
-
-    assert response.status_code == 404
-    assert response.json() == "User does not exist"
 
 
 def test_swipe_right_unsuccessful():

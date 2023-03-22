@@ -15,8 +15,8 @@ from fastapi.exceptions import HTTPException
 from exponent_server_sdk import PushClient
 from exponent_server_sdk import PushMessage
 
-from utilities import FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo, DeleteS3Folder
-from helpers import UpdateProfilePicInChatMessages, get_user_preferences, get_logged_in_user, create_match, update_or_set_user_prefs, create_or_update_profile, delete_match, get_all_users_to_notify
+from utilities import FormatFireBaseDoc, FormatUserObject, GetMatchedUserInfo, DeleteS3Folder
+from helpers import UpdateProfilePicInChatMessages, get_user_preferences, get_logged_in_user, create_match, update_or_set_user_prefs, create_or_update_profile, delete_match, get_all_users_to_notify, check_match_exists, toggle_swap_confirmation, get_notification_type
 from models import Location, UserObject, UserPrefsObject, MessageObject, SwipedUserObject, NotificationObject, ManyNotificationsObject, DeleteMatchesObject
 import boto3
 
@@ -255,32 +255,15 @@ async def sendMessage(message: MessageObject, uid: str = Depends(verify_auth)):
 
 
 @app.post("/confirmSwap")
-async def confirmSwap(matchedUsers: List[str], uid: str = Depends(verify_auth)):
+async def confirmSwap(usersMatched: List[str], uid: str = Depends(verify_auth)):
     try:
-        matchedUser = None
-        match_ref = db.collection(u'matches').document(
-            GenerateId(matchedUsers[0], matchedUsers[1]))
-        match = match_ref.get()
-        match_dict = match.to_dict()
-        if match.exists:
-            matchedUser = GetMatchedUserInfo(match_dict["users"], uid)
-        else:
+        matched_user, match_dict, match_ref = check_match_exists(
+            db, uid, usersMatched)
+        if matched_user == None:
             return JSONResponse(content="Match does not exist!", status_code=404)
-        currentUser = match_dict["users"][uid]
-        updatedCurrentUser = {
-            **currentUser,
-            u'isConfirmed': True,
-            u'timestamp': firestore.SERVER_TIMESTAMP
-        }
-        updatedMatchedUsers = {
-            uid: updatedCurrentUser,
-            matchedUser["id"]: matchedUser
-        }
 
-        match_ref.update({
-            u'users': updatedMatchedUsers,
-            u'timestamp': firestore.SERVER_TIMESTAMP
-        })
+        toggle_swap_confirmation(
+            match_ref, matched_user, match_dict, True, uid)
         return JSONResponse(content="Successfully confirmed swap", status_code=200)
 
     except Exception as e:
@@ -289,32 +272,15 @@ async def confirmSwap(matchedUsers: List[str], uid: str = Depends(verify_auth)):
 
 
 @app.post("/cancelSwap")
-async def confirmSwap(matchedUsers: List[str], uid: str = Depends(verify_auth)):
+async def confirmSwap(usersMatched: List[str], uid: str = Depends(verify_auth)):
     try:
-        matchedUser = None
-        match_ref = db.collection(u'matches').document(
-            GenerateId(matchedUsers[0], matchedUsers[1]))
-        match = match_ref.get()
-        match_dict = match.to_dict()
-        if match.exists:
-            matchedUser = GetMatchedUserInfo(match_dict["users"], uid)
-        else:
+        matched_user, match_dict, match_ref = check_match_exists(
+            db, uid, usersMatched)
+        if matched_user == None:
             return JSONResponse(content="Match does not exist!", status_code=404)
-        currentUser = match_dict["users"][uid]
-        updatedCurrentUser = {
-            **currentUser,
-            u'isConfirmed': False,
-            u'timestamp': firestore.SERVER_TIMESTAMP
-        }
-        updatedMatchedUsers = {
-            uid: updatedCurrentUser,
-            matchedUser["id"]: matchedUser
-        }
 
-        match_ref.update({
-            u'users': updatedMatchedUsers,
-            u'timestamp': firestore.SERVER_TIMESTAMP
-        })
+        toggle_swap_confirmation(
+            match_ref, matched_user, match_dict, False, uid)
         return JSONResponse(content="Successfully canceled swap", status_code=200)
 
     except Exception as e:
@@ -371,38 +337,13 @@ async def sendPushNotification(notification: NotificationObject, uid: str = Depe
     receiver_id = GetMatchedUserInfo(
         notification.matchDetails.users, uid)["id"]
 
-    sender_name = notification.matchDetails.users[uid].displayName
-    item_name = notification.matchDetails.users[uid].itemName
-
     doc_ref = db.collection("users").document(receiver_id)
     doc_snapshot = doc_ref.get().to_dict()
     if "deviceToken" in doc_snapshot:
         device_token = doc_snapshot["deviceToken"]
     else:
         return JSONResponse(content=f"Receiver {receiver_id} device token does not exist", status_code=400)
-    if notification.type == "match":
-        title = "New Swap Partner!"
-        body = f"{sender_name} wants to swap with you!"
-        data = {
-            "type": notification.type,
-            "match": {
-                "loggedInProfile": notification.matchDetails.users[uid].dict(),
-                "userSwiped": notification.matchDetails.users[receiver_id].dict()
-            },
-            "matchDetails": notification.matchDetails.dict()
-        }
-    elif notification.type == "message":
-        title = f"{sender_name} ({item_name})"
-        body = notification.message
-        data = {
-            "type": notification.type,
-            "message": {
-                "message": notification.message,
-                "sender": notification.matchDetails.users[uid].dict()
-            },
-            "matchDetails": notification.matchDetails.dict()
-        }
-
+    title, body, data = get_notification_type(notification, uid)
     push_client = PushClient()
     try:
         # Send the notification

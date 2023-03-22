@@ -1,7 +1,7 @@
 from typing import List
 from firebase_admin import auth, firestore
-from models import DeleteMatchesObject, UserObject, UserPrefsObject
-from utilities import DeleteS3Folder, FormatFireBaseDoc, FormatUserObject, GenerateId
+from models import DeleteMatchesObject, NotificationObject, UserObject, UserPrefsObject
+from utilities import DeleteS3Folder, FormatFireBaseDoc, FormatUserObject, GenerateId, GetMatchedUserInfo
 
 
 def get_user_preferences(db, uid: str):
@@ -163,3 +163,66 @@ def get_all_users_to_notify(uid: str, all_users_matched: List[str], payload: Del
     }
 
     return notifications_object
+
+
+def check_match_exists(db, uid: str, usersMatched: List[str]):
+    matchedUser = None
+    match_dict = None
+
+    match_ref = db.collection(u'matches').document(
+        GenerateId(usersMatched[0], usersMatched[1]))
+    match = match_ref.get()
+    if match.exists:
+        match_dict = match.to_dict()
+        matchedUser = GetMatchedUserInfo(match_dict["users"], uid)
+
+    return matchedUser, match_dict, match_ref
+
+
+def toggle_swap_confirmation(match_ref, matched_user, match_dict, confirm: bool, uid: str):
+    currentUser = match_dict["users"][uid]
+    updatedCurrentUser = {
+        **currentUser,
+        u'isConfirmed': True if confirm is True else False,
+        u'timestamp': firestore.SERVER_TIMESTAMP
+    }
+    updatedMatchedUsers = {
+        uid: updatedCurrentUser,
+        matched_user["id"]: matched_user
+    }
+
+    match_ref.update({
+        u'users': updatedMatchedUsers,
+        u'timestamp': firestore.SERVER_TIMESTAMP
+    })
+
+
+def get_notification_type(notification: NotificationObject, uid: str):
+    receiver_id = GetMatchedUserInfo(
+        notification.matchDetails.users, uid)["id"]
+    sender_name = notification.matchDetails.users[uid].displayName
+    item_name = notification.matchDetails.users[uid].itemName
+    if notification.type == "match":
+        title = "New Swap Partner!"
+        body = f"{sender_name} wants to swap with you!"
+        data = {
+            "type": notification.type,
+            "match": {
+                "loggedInProfile": notification.matchDetails.users[uid].dict(),
+                "userSwiped": notification.matchDetails.users[receiver_id].dict()
+            },
+            "matchDetails": notification.matchDetails.dict()
+        }
+    elif notification.type == "message":
+        title = f"{sender_name} ({item_name})"
+        body = notification.message
+        data = {
+            "type": notification.type,
+            "message": {
+                "message": notification.message,
+                "sender": notification.matchDetails.users[uid].dict()
+            },
+            "matchDetails": notification.matchDetails.dict()
+        }
+
+    return title, body, data

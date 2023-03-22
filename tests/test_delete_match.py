@@ -57,7 +57,7 @@ def test_delete_match_successful(jwt_token):
         "/deleteMatch",
         headers={"Authorization": "Bearer " + jwt_token},
         json=usersMatched)
-    assert response.status_code == 204
+    assert response.status_code == 200
     assert response.json() == "Successfully deleted match"
 
     # add swipe back

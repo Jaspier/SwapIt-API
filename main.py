@@ -181,7 +181,7 @@ async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verif
         if (prefs.photoKey != ""):
             UpdateProfilePicInChatMessages(db, uid, prefs.photoKey)
 
-        return JSONResponse(content="Successfully updated user preferences", status_code=204)
+        return JSONResponse(content="Successfully updated user preferences", status_code=200)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to update user preferences: " + str(e))
@@ -191,7 +191,7 @@ async def updateUserPreferences(prefs: UserPrefsObject, uid: str = Depends(verif
 async def createProfile(profile: UserObject, uid: str = Depends(verify_auth)):
     try:
         res = create_or_update_profile(db, profile, uid)
-        return JSONResponse(content=res, status_code=204)
+        return JSONResponse(content=res, status_code=200)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to create/update profile: " + str(e))
@@ -201,7 +201,7 @@ async def createProfile(profile: UserObject, uid: str = Depends(verify_auth)):
 async def deleteMatch(usersMatched: List[str], uid: str = Depends(verify_auth)):
     try:
         delete_match(db, s3_bucket, usersMatched)
-        return JSONResponse(content="Successfully deleted match", status_code=204)
+        return JSONResponse(content="Successfully deleted match", status_code=200)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail="Failed to delete match: " + str(e))
@@ -298,7 +298,7 @@ async def resetProfile(uid: str = Depends(verify_auth)):
             "timestamp": firestore.SERVER_TIMESTAMP,
             "active": False
         })
-        return JSONResponse(content="Successfully reset profile", status_code=204)
+        return JSONResponse(content="Successfully reset profile", status_code=200)
 
     except Exception as e:
         raise HTTPException(

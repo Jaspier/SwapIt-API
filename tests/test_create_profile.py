@@ -28,7 +28,7 @@ def test_update_existing_profile(jwt_token):
         "/createProfile",
         headers={"Authorization": "Bearer " + jwt_token},
         json=profile)
-    assert response.status_code == 204
+    assert response.status_code == 200
     assert response.json() == res
 
 
@@ -40,7 +40,7 @@ def test_create_new_profile(jwt_token):
         "/createProfile",
         headers={"Authorization": "Bearer " + jwt_token},
         json=profile)
-    assert response.status_code == 204
+    assert response.status_code == 200
     assert response.json() == res
 
 

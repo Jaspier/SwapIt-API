@@ -8,7 +8,7 @@ client = TestClient(app)
 def test_reset_profile_successful(jwt_token):
     response = client.get(
         "/resetProfile", headers={"Authorization": "Bearer " + jwt_token})
-    assert response.status_code == 204
+    assert response.status_code == 200
     assert response.json() == "Successfully reset profile"
 
     # repopulate profile

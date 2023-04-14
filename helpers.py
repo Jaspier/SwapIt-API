@@ -203,7 +203,7 @@ def get_notification_type(notification: NotificationObject, uid: str):
     sender_name = notification.matchDetails.users[uid].displayName
     item_name = notification.matchDetails.users[uid].itemName
     if notification.type == "match":
-        title = "New Swap Partner!"
+        title = f"New Swap Partner! ({item_name})"
         body = f"{sender_name} wants to swap with you!"
         data = {
             "type": notification.type,

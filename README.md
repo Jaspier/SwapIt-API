@@ -16,3 +16,5 @@ REST API for handling [SwapIt](https://github.com/Jaspier/SwapIt) app services
 - google-cloud-firestore
 - pyrebase
 - exponent-server-sdk (notifications)
+
+Visit [API](https://swapit-api.herokuapp.com/)

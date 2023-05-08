@@ -1,32 +1,18 @@
 # SwapIt-API
 
-## Name
-
-[SwapIt](https://gitlab2.eeecs.qub.ac.uk/40253397/swapit)
-
 ## Description
 
-REST API for handling [SwapIt](https://gitlab2.eeecs.qub.ac.uk/40253397/swapit) app services
+REST API for handling [SwapIt](https://github.com/Jaspier/SwapIt) app services
 
-## Installation
+## Technologies
 
-- pip install requirements.txt
-- Create firebase_config.json file
-- Create <firebase_projectName>\_service_account_keys.json file
-- Email me for firebase credentials (check support section)
+- Python
+- FAST API
 
-## Local Usage
+## Main Third-party Libraries
 
-uvicorn main:app --reload
-
-## Support
-
-adungo01@qub.ac.uk
-
-## Roadmap
-
-https://docs.google.com/document/d/1oqM3FwakssBh4wU-VFZ9-pBwo9hiAFBtuvPG1l4Hj5g/edit?usp=sharing
-
-## Project status
-
-ON-GOING
+- boto3 (AWS S3)
+- firebase-admin
+- google-cloud-firestore
+- pyrebase
+- exponent-server-sdk (notifications)
